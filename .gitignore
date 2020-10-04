@@ -1,0 +1,8 @@
+zeroxyz
+zeroxyz-go-win
+zeroxyz-go-tux
+zeroxyz-go-mac
+coverage.txt
+**/debug.test
+.vscode
+.DS_Store

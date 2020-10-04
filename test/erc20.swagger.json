@@ -1,0 +1,1776 @@
+{
+  "schemes": [
+    "http"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "Implementation of the basic standard token. https://eips.ethereum.org/EIPS/eip-20 Originally based on code by FirstBlood: https://github.com/Firstbloodio/token/blob/master/smart_contract/FirstBloodToken.sol * This implementation emits additional Approval events, allowing applications to reconstruct the allowance status for all accounts just by listening to said events. Note that this isn't required by the specification, and other compliant implementations may not do it.",
+    "title": "erc20",
+    "version": "1.0"
+  },
+  "host": "localhost:80",
+  "basePath": "/contracts/erc20",
+  "paths": {
+    "/": {
+      "post": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "constructor()",
+        "operationId": "constructor_post",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/constructor_inputs"
+            }
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          },
+          {
+            "$ref": "#/parameters/syncParam"
+          },
+          {
+            "$ref": "#/parameters/callParam"
+          },
+          {
+            "$ref": "#/parameters/privateFromParam"
+          },
+          {
+            "$ref": "#/parameters/privateForParam"
+          },
+          {
+            "$ref": "#/parameters/blocknumberParam"
+          },
+          {
+            "$ref": "#/parameters/privacyGroupIdParam"
+          },
+          {
+            "$ref": "#/parameters/registerParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/constructor_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/Approval/subscribe": {
+      "post": {
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Approval(address,address,uint256) [event]",
+        "operationId": "Approval_subscribe",
+        "parameters": [
+          {
+            "description": "Subscription configuration for the REST Gateway (response schema will be delivered async over the configured stream)",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "properties": {
+                "fromBlock": {
+                  "description": "The block number to start the subscription from",
+                  "type": "string",
+                  "default": "latest"
+                },
+                "stream": {
+                  "description": "The ID of an event stream already configured in the REST Gateway",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/Approval_event"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/Transfer/subscribe": {
+      "post": {
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Transfer(address,address,uint256) [event]",
+        "operationId": "Transfer_subscribe",
+        "parameters": [
+          {
+            "description": "Subscription configuration for the REST Gateway (response schema will be delivered async over the configured stream)",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "properties": {
+                "fromBlock": {
+                  "description": "The block number to start the subscription from",
+                  "type": "string",
+                  "default": "latest"
+                },
+                "stream": {
+                  "description": "The ID of an event stream already configured in the REST Gateway",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/Transfer_event"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/{address}": {
+      "post": {
+        "description": "Add a friendly path for an instance of this contract already deployed to the chain",
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Register an existing contract address",
+        "operationId": "registerAddress",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "$ref": "#/parameters/registerParam"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "description": "Registration request",
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successfully registered"
+          }
+        }
+      }
+    },
+    "/{address}/Approval/subscribe": {
+      "post": {
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Approval(address,address,uint256) [event]",
+        "operationId": "Approval_subscribe_all",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Subscription configuration for the REST Gateway (response schema will be delivered async over the configured stream)",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "properties": {
+                "fromBlock": {
+                  "description": "The block number to start the subscription from",
+                  "type": "string",
+                  "default": "latest"
+                },
+                "stream": {
+                  "description": "The ID of an event stream already configured in the REST Gateway",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/Approval_event"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/{address}/Transfer/subscribe": {
+      "post": {
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Transfer(address,address,uint256) [event]",
+        "operationId": "Transfer_subscribe_all",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Subscription configuration for the REST Gateway (response schema will be delivered async over the configured stream)",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "properties": {
+                "fromBlock": {
+                  "description": "The block number to start the subscription from",
+                  "type": "string",
+                  "default": "latest"
+                },
+                "stream": {
+                  "description": "The ID of an event stream already configured in the REST Gateway",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/Transfer_event"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/{address}/allowance": {
+      "get": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Function to check the amount of tokens that an owner allowed to a spender.",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "allowance(address,address) [read only]",
+        "operationId": "allowance_get",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "address: address The address which owns the funds.",
+            "name": "owner",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "address: address The address which will spend the funds.",
+            "name": "spender",
+            "in": "query",
+            "required": true
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A uint256 specifying the amount of tokens still available for the spender.",
+            "schema": {
+              "$ref": "#/definitions/allowance_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Function to check the amount of tokens that an owner allowed to a spender.",
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "allowance(address,address) [read only]",
+        "operationId": "allowance_post",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/allowance_inputs"
+            }
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          },
+          {
+            "$ref": "#/parameters/syncParam"
+          },
+          {
+            "$ref": "#/parameters/callParam"
+          },
+          {
+            "$ref": "#/parameters/privateFromParam"
+          },
+          {
+            "$ref": "#/parameters/privateForParam"
+          },
+          {
+            "$ref": "#/parameters/blocknumberParam"
+          },
+          {
+            "$ref": "#/parameters/privacyGroupIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A uint256 specifying the amount of tokens still available for the spender.",
+            "schema": {
+              "$ref": "#/definitions/allowance_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/{address}/approve": {
+      "get": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Approve the passed address to spend the specified amount of tokens on behalf of msg.sender. Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "approve(address,uint256)",
+        "operationId": "approve_get",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "address: The address which will spend the funds.",
+            "name": "spender",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "uint256: The amount of tokens to be spent.",
+            "name": "value",
+            "in": "query",
+            "required": true
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/approve_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Approve the passed address to spend the specified amount of tokens on behalf of msg.sender. Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729",
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "approve(address,uint256)",
+        "operationId": "approve_post",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/approve_inputs"
+            }
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          },
+          {
+            "$ref": "#/parameters/syncParam"
+          },
+          {
+            "$ref": "#/parameters/callParam"
+          },
+          {
+            "$ref": "#/parameters/privateFromParam"
+          },
+          {
+            "$ref": "#/parameters/privateForParam"
+          },
+          {
+            "$ref": "#/parameters/blocknumberParam"
+          },
+          {
+            "$ref": "#/parameters/privacyGroupIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/approve_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/{address}/balanceOf": {
+      "get": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Gets the balance of the specified address.",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "balanceOf(address) [read only]",
+        "operationId": "balanceOf_get",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "address: The address to query the balance of.",
+            "name": "owner",
+            "in": "query",
+            "required": true
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A uint256 representing the amount owned by the passed address.",
+            "schema": {
+              "$ref": "#/definitions/balanceOf_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Gets the balance of the specified address.",
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "balanceOf(address) [read only]",
+        "operationId": "balanceOf_post",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/balanceOf_inputs"
+            }
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          },
+          {
+            "$ref": "#/parameters/syncParam"
+          },
+          {
+            "$ref": "#/parameters/callParam"
+          },
+          {
+            "$ref": "#/parameters/privateFromParam"
+          },
+          {
+            "$ref": "#/parameters/privateForParam"
+          },
+          {
+            "$ref": "#/parameters/blocknumberParam"
+          },
+          {
+            "$ref": "#/parameters/privacyGroupIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A uint256 representing the amount owned by the passed address.",
+            "schema": {
+              "$ref": "#/definitions/balanceOf_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/{address}/decreaseAllowance": {
+      "get": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Decrease the amount of tokens that an owner allowed to a spender. approve should be called when _allowed[msg.sender][spender] == 0. To decrement allowed value is better to use this function to avoid 2 calls (and wait until the first transaction is mined) From MonolithDAO Token.sol Emits an Approval event.",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "decreaseAllowance(address,uint256)",
+        "operationId": "decreaseAllowance_get",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "address: The address which will spend the funds.",
+            "name": "spender",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "uint256: The amount of tokens to decrease the allowance by.",
+            "name": "subtractedValue",
+            "in": "query",
+            "required": true
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/decreaseAllowance_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Decrease the amount of tokens that an owner allowed to a spender. approve should be called when _allowed[msg.sender][spender] == 0. To decrement allowed value is better to use this function to avoid 2 calls (and wait until the first transaction is mined) From MonolithDAO Token.sol Emits an Approval event.",
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "decreaseAllowance(address,uint256)",
+        "operationId": "decreaseAllowance_post",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/decreaseAllowance_inputs"
+            }
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          },
+          {
+            "$ref": "#/parameters/syncParam"
+          },
+          {
+            "$ref": "#/parameters/callParam"
+          },
+          {
+            "$ref": "#/parameters/privateFromParam"
+          },
+          {
+            "$ref": "#/parameters/privateForParam"
+          },
+          {
+            "$ref": "#/parameters/blocknumberParam"
+          },
+          {
+            "$ref": "#/parameters/privacyGroupIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/decreaseAllowance_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/{address}/increaseAllowance": {
+      "get": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Increase the amount of tokens that an owner allowed to a spender. approve should be called when _allowed[msg.sender][spender] == 0. To increment allowed value is better to use this function to avoid 2 calls (and wait until the first transaction is mined) From MonolithDAO Token.sol Emits an Approval event.",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "increaseAllowance(address,uint256)",
+        "operationId": "increaseAllowance_get",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "address: The address which will spend the funds.",
+            "name": "spender",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "uint256: The amount of tokens to increase the allowance by.",
+            "name": "addedValue",
+            "in": "query",
+            "required": true
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/increaseAllowance_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Increase the amount of tokens that an owner allowed to a spender. approve should be called when _allowed[msg.sender][spender] == 0. To increment allowed value is better to use this function to avoid 2 calls (and wait until the first transaction is mined) From MonolithDAO Token.sol Emits an Approval event.",
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "increaseAllowance(address,uint256)",
+        "operationId": "increaseAllowance_post",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/increaseAllowance_inputs"
+            }
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          },
+          {
+            "$ref": "#/parameters/syncParam"
+          },
+          {
+            "$ref": "#/parameters/callParam"
+          },
+          {
+            "$ref": "#/parameters/privateFromParam"
+          },
+          {
+            "$ref": "#/parameters/privateForParam"
+          },
+          {
+            "$ref": "#/parameters/blocknumberParam"
+          },
+          {
+            "$ref": "#/parameters/privacyGroupIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/increaseAllowance_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/{address}/totalSupply": {
+      "get": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Total number of tokens in existence.",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "totalSupply() [read only]",
+        "operationId": "totalSupply_get",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/totalSupply_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Total number of tokens in existence.",
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "totalSupply() [read only]",
+        "operationId": "totalSupply_post",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/totalSupply_inputs"
+            }
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          },
+          {
+            "$ref": "#/parameters/syncParam"
+          },
+          {
+            "$ref": "#/parameters/callParam"
+          },
+          {
+            "$ref": "#/parameters/privateFromParam"
+          },
+          {
+            "$ref": "#/parameters/privateForParam"
+          },
+          {
+            "$ref": "#/parameters/blocknumberParam"
+          },
+          {
+            "$ref": "#/parameters/privacyGroupIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/totalSupply_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/{address}/transfer": {
+      "get": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Transfer token to a specified address.",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "transfer(address,uint256)",
+        "operationId": "transfer_get",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "address: The address to transfer to.",
+            "name": "to",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "uint256: The amount to be transferred.",
+            "name": "value",
+            "in": "query",
+            "required": true
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/transfer_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Transfer token to a specified address.",
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "transfer(address,uint256)",
+        "operationId": "transfer_post",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/transfer_inputs"
+            }
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          },
+          {
+            "$ref": "#/parameters/syncParam"
+          },
+          {
+            "$ref": "#/parameters/callParam"
+          },
+          {
+            "$ref": "#/parameters/privateFromParam"
+          },
+          {
+            "$ref": "#/parameters/privateForParam"
+          },
+          {
+            "$ref": "#/parameters/blocknumberParam"
+          },
+          {
+            "$ref": "#/parameters/privacyGroupIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/transfer_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/{address}/transferFrom": {
+      "get": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Transfer tokens from one address to another. Note that while this function emits an Approval event, this is not required as per the specification, and other compliant implementations may not emit the event.",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "transferFrom(address,address,uint256)",
+        "operationId": "transferFrom_get",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "address: address The address which you want to send tokens from",
+            "name": "from",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "address: address The address which you want to transfer to",
+            "name": "to",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "uint256: uint256 the amount of tokens to be transferred",
+            "name": "value",
+            "in": "query",
+            "required": true
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/transferFrom_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "KaleidoAppCredential": []
+          }
+        ],
+        "description": "Transfer tokens from one address to another. Note that while this function emits an Approval event, this is not required as per the specification, and other compliant implementations may not emit the event.",
+        "consumes": [
+          "application/json",
+          "application/x-yaml"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "summary": "transferFrom(address,address,uint256)",
+        "operationId": "transferFrom_post",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "The contract address",
+            "name": "address",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/transferFrom_inputs"
+            }
+          },
+          {
+            "$ref": "#/parameters/fromParam"
+          },
+          {
+            "$ref": "#/parameters/valueParam"
+          },
+          {
+            "$ref": "#/parameters/gasParam"
+          },
+          {
+            "$ref": "#/parameters/gaspriceParam"
+          },
+          {
+            "$ref": "#/parameters/syncParam"
+          },
+          {
+            "$ref": "#/parameters/callParam"
+          },
+          {
+            "$ref": "#/parameters/privateFromParam"
+          },
+          {
+            "$ref": "#/parameters/privateForParam"
+          },
+          {
+            "$ref": "#/parameters/blocknumberParam"
+          },
+          {
+            "$ref": "#/parameters/privacyGroupIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful response",
+            "schema": {
+              "$ref": "#/definitions/transferFrom_outputs"
+            }
+          },
+          "default": {
+            "description": "error",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Approval_event": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "description": "address",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        },
+        "spender": {
+          "description": "address",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        },
+        "value": {
+          "description": "uint256",
+          "type": "string",
+          "pattern": "^-?[0-9]+$"
+        }
+      }
+    },
+    "Transfer_event": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "description": "address",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        },
+        "to": {
+          "description": "address",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        },
+        "value": {
+          "description": "uint256",
+          "type": "string",
+          "pattern": "^-?[0-9]+$"
+        }
+      }
+    },
+    "allowance_inputs": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "description": "address: address The address which owns the funds.",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        },
+        "spender": {
+          "description": "address: address The address which will spend the funds.",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        }
+      }
+    },
+    "allowance_outputs": {
+      "type": "object",
+      "properties": {
+        "output": {
+          "description": "uint256",
+          "type": "string",
+          "pattern": "^-?[0-9]+$"
+        }
+      }
+    },
+    "approve_inputs": {
+      "type": "object",
+      "properties": {
+        "spender": {
+          "description": "address: The address which will spend the funds.",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        },
+        "value": {
+          "description": "uint256: The amount of tokens to be spent.",
+          "type": "string",
+          "pattern": "^-?[0-9]+$"
+        }
+      }
+    },
+    "approve_outputs": {
+      "type": "object",
+      "properties": {
+        "output": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      }
+    },
+    "balanceOf_inputs": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "description": "address: The address to query the balance of.",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        }
+      }
+    },
+    "balanceOf_outputs": {
+      "type": "object",
+      "properties": {
+        "output": {
+          "description": "uint256",
+          "type": "string",
+          "pattern": "^-?[0-9]+$"
+        }
+      }
+    },
+    "constructor_inputs": {
+      "type": "object"
+    },
+    "constructor_outputs": {
+      "type": "object"
+    },
+    "decreaseAllowance_inputs": {
+      "type": "object",
+      "properties": {
+        "spender": {
+          "description": "address: The address which will spend the funds.",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        },
+        "subtractedValue": {
+          "description": "uint256: The amount of tokens to decrease the allowance by.",
+          "type": "string",
+          "pattern": "^-?[0-9]+$"
+        }
+      }
+    },
+    "decreaseAllowance_outputs": {
+      "type": "object",
+      "properties": {
+        "output": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      }
+    },
+    "error": {
+      "properties": {
+        "error": {
+          "description": "Error message",
+          "type": "string"
+        }
+      }
+    },
+    "increaseAllowance_inputs": {
+      "type": "object",
+      "properties": {
+        "addedValue": {
+          "description": "uint256: The amount of tokens to increase the allowance by.",
+          "type": "string",
+          "pattern": "^-?[0-9]+$"
+        },
+        "spender": {
+          "description": "address: The address which will spend the funds.",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        }
+      }
+    },
+    "increaseAllowance_outputs": {
+      "type": "object",
+      "properties": {
+        "output": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      }
+    },
+    "totalSupply_inputs": {
+      "type": "object"
+    },
+    "totalSupply_outputs": {
+      "type": "object",
+      "properties": {
+        "output": {
+          "description": "uint256",
+          "type": "string",
+          "pattern": "^-?[0-9]+$"
+        }
+      }
+    },
+    "transferFrom_inputs": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "description": "address: address The address which you want to send tokens from",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        },
+        "to": {
+          "description": "address: address The address which you want to transfer to",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        },
+        "value": {
+          "description": "uint256: uint256 the amount of tokens to be transferred",
+          "type": "string",
+          "pattern": "^-?[0-9]+$"
+        }
+      }
+    },
+    "transferFrom_outputs": {
+      "type": "object",
+      "properties": {
+        "output": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      }
+    },
+    "transfer_inputs": {
+      "type": "object",
+      "properties": {
+        "to": {
+          "description": "address: The address to transfer to.",
+          "type": "string",
+          "pattern": "^(0x)?[a-fA-F0-9]{40}$"
+        },
+        "value": {
+          "description": "uint256: The amount to be transferred.",
+          "type": "string",
+          "pattern": "^-?[0-9]+$"
+        }
+      }
+    },
+    "transfer_outputs": {
+      "type": "object",
+      "properties": {
+        "output": {
+          "description": "bool",
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "parameters": {
+    "blocknumberParam": {
+      "type": "string",
+      "description": "The target block number for eth_call requests. One of 'earliest/latest/pending', a number or a hex string (header: x-besu-blocknumber)",
+      "name": "besu-blocknumber",
+      "in": "query"
+    },
+    "callParam": {
+      "type": "boolean",
+      "description": "Perform a read-only call with the same parameters that would be used to invoke, and return result (header: x-besu-call)",
+      "name": "besu-call",
+      "in": "query",
+      "allowEmptyValue": true
+    },
+    "fromParam": {
+      "type": "string",
+      "description": "The 'from' address (header: x-besu-from)",
+      "name": "besu-from",
+      "in": "query"
+    },
+    "gasParam": {
+      "type": "integer",
+      "description": "Gas to send with the transaction (auto-calculated if not set) (header: x-besu-gas)",
+      "name": "besu-gas",
+      "in": "query",
+      "allowEmptyValue": true
+    },
+    "gaspriceParam": {
+      "type": "integer",
+      "description": "Gas Price offered (header: x-besu-gasprice)",
+      "name": "besu-gasprice",
+      "in": "query",
+      "allowEmptyValue": true
+    },
+    "privacyGroupIdParam": {
+      "type": "string",
+      "description": "Private transaction group ID (header: x-besu-privacyGroupId)",
+      "name": "besu-privacygroupid",
+      "in": "query"
+    },
+    "privateForParam": {
+      "type": "string",
+      "description": "Private transaction recipients (comma separated or multiple params) (header: x-besu-privatefor)",
+      "name": "besu-privatefor",
+      "in": "query"
+    },
+    "privateFromParam": {
+      "type": "string",
+      "description": "Private transaction sender (header: x-besu-privatefrom)",
+      "name": "besu-privatefrom",
+      "in": "query"
+    },
+    "registerParam": {
+      "type": "string",
+      "description": "Register the installed contract on a friendly path (overwrites existing) (header: x-besu-register)",
+      "name": "besu-register",
+      "in": "query"
+    },
+    "syncParam": {
+      "type": "boolean",
+      "default": true,
+      "description": "Block the HTTP request until the tx is mined (does not store the receipt) (header: x-besu-sync)",
+      "name": "besu-sync",
+      "in": "query",
+      "allowEmptyValue": true
+    },
+    "valueParam": {
+      "type": "integer",
+      "description": "Ether value to send with the transaction (header: x-besu-ethvalue)",
+      "name": "besu-ethvalue",
+      "in": "query",
+      "allowEmptyValue": true
+    }
+  },
+  "securityDefinitions": {
+    "KaleidoAppCredential": {
+      "type": "basic"
+    }
+  }
+}
