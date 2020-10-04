@@ -1,4 +1,4 @@
-// Copyright 2018, 2019 Kaleido
+// Copyright 2018, 2019 SEE CONTRIBUTORS
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 var buildDate, buildVersion string // Set by ldflags
 
 func main() {
-	print("Copyright (C) 2018,2019 Kaleido\n" +
+	print("Copyright (C) 2018,2019 SEE CONTRIBUTORS\n" +
 		"Licensed under the Apache License, Version 2.0\n")
 	print(fmt.Sprintf("Version: %s (Build Date: %s)\n\n", buildVersion, buildDate))
 	exitVal := cmd.Execute()

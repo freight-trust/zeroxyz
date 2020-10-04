@@ -14,7 +14,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "consumes": [
@@ -129,7 +129,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "produces": [
@@ -190,7 +190,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "consumes": [
@@ -269,7 +269,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "produces": [
@@ -323,7 +323,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "consumes": [
@@ -528,7 +528,7 @@
     }
   },
   "securityDefinitions": {
-    "KaleidoAppCredential": {
+    "SEE CONTRIBUTORSAppCredential": {
       "type": "basic"
     }
   }

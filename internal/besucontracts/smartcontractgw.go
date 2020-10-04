@@ -1,4 +1,4 @@
-// Copyright 2019 Kaleido
+// Copyright 2019 SEE CONTRIBUTORS
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1294,7 +1294,7 @@ func (g *smartContractGW) writeHTMLForUI(prefix, id, from string, isGateway, fac
 		hasMethodsMessage = `<li><code>GET</code> actions <b>never</b> write to the chain. Even for actions that update state - so you can simulate execution</li>
     <li><code>POST</code> actions against <code>/subscribe</code> paths marked <code>[event]</code> add subscriptions to event streams
     <ul>
-      <li>Pre-configure your event streams with actions in the Kaleido console, or via the <code>/eventstreams</code> API route on Ethconnect</b></li>
+      <li>Pre-configure your event streams with actions in the SEE CONTRIBUTORS console, or via the <code>/eventstreams</code> API route on Ethconnect</b></li>
       <li>Once you add a subscription, all matching events will be reliably read, batched and delivered over your event stream</li>
     </ul></li>
     <li>Data type conversion is automatic for all actions an events.
@@ -1325,7 +1325,7 @@ func (g *smartContractGW) writeHTMLForUI(prefix, id, from string, isGateway, fac
     <img 
       slot="logo" 
       src="//api.kaleido.io/kaleido.svg"
-      alt="Kaleido"
+      alt="SEE CONTRIBUTORS"
       onclick="window.open('https://docs.kaleido.io/kaleido-services/zeroxyz')"
       style="cursor: pointer; padding-bottom: 2px; margin-left: 25px; margin-right: 10px;"
     />
@@ -1336,7 +1336,7 @@ func (g *smartContractGW) writeHTMLForUI(prefix, id, from string, isGateway, fac
         <p><a href="#quickstart" style="text-decoration: none" onclick="document.getElementById('kaleido-quickstart-header').style.display = 'block'; this.style.display = 'none'; return false;">Show additional instructions</a></p>
         <div id="kaleido-quickstart-header" style="display: none;">
           <ul>
-            <li>Authorization with Kaleido Application Credentials has already been performed when loading this page, and is passed to API calls by your browser.</code>
+            <li>Authorization with SEE CONTRIBUTORS Application Credentials has already been performed when loading this page, and is passed to API calls by your browser.</code>
             <li><code>POST</code> actions against Solidity methods will <b>write to the chain</b> unless <code>besud-call</code> is set, or the method is marked <code>[read-only]</code>
             <ul>
               <li>When <code>besud-sync</code> is set, the response will not be returned until the transaction is mined <b>taking a few seconds</b></li>
