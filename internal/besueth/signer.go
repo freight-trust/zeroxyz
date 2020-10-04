@@ -1,4 +1,4 @@
-// Copyright 2018, 2019 Kaleido
+// Copyright 2018, 2019 SEE CONTRIBUTORS
 
 package besudeth
 

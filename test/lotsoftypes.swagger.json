@@ -16,7 +16,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Echo back some types",
@@ -106,7 +106,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Echo back some types",
@@ -179,7 +179,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Echo back some more types",
@@ -269,7 +269,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Echo back some more types",
@@ -342,7 +342,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "produces": [
@@ -424,7 +424,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "consumes": [
@@ -830,7 +830,7 @@
     }
   },
   "securityDefinitions": {
-    "KaleidoAppCredential": {
+    "SEE CONTRIBUTORSAppCredential": {
       "type": "basic"
     }
   }

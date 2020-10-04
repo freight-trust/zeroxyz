@@ -15,7 +15,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "consumes": [
@@ -336,7 +336,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Function to check the amount of tokens that an owner allowed to a spender.",
@@ -398,7 +398,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Function to check the amount of tokens that an owner allowed to a spender.",
@@ -478,7 +478,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Approve the passed address to spend the specified amount of tokens on behalf of msg.sender. Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729",
@@ -540,7 +540,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Approve the passed address to spend the specified amount of tokens on behalf of msg.sender. Beware that changing an allowance with this method brings the risk that someone may use both the old and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729",
@@ -620,7 +620,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Gets the balance of the specified address.",
@@ -675,7 +675,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Gets the balance of the specified address.",
@@ -755,7 +755,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Decrease the amount of tokens that an owner allowed to a spender. approve should be called when _allowed[msg.sender][spender] == 0. To decrement allowed value is better to use this function to avoid 2 calls (and wait until the first transaction is mined) From MonolithDAO Token.sol Emits an Approval event.",
@@ -817,7 +817,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Decrease the amount of tokens that an owner allowed to a spender. approve should be called when _allowed[msg.sender][spender] == 0. To decrement allowed value is better to use this function to avoid 2 calls (and wait until the first transaction is mined) From MonolithDAO Token.sol Emits an Approval event.",
@@ -897,7 +897,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Increase the amount of tokens that an owner allowed to a spender. approve should be called when _allowed[msg.sender][spender] == 0. To increment allowed value is better to use this function to avoid 2 calls (and wait until the first transaction is mined) From MonolithDAO Token.sol Emits an Approval event.",
@@ -959,7 +959,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Increase the amount of tokens that an owner allowed to a spender. approve should be called when _allowed[msg.sender][spender] == 0. To increment allowed value is better to use this function to avoid 2 calls (and wait until the first transaction is mined) From MonolithDAO Token.sol Emits an Approval event.",
@@ -1039,7 +1039,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Total number of tokens in existence.",
@@ -1087,7 +1087,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Total number of tokens in existence.",
@@ -1167,7 +1167,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Transfer token to a specified address.",
@@ -1229,7 +1229,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Transfer token to a specified address.",
@@ -1309,7 +1309,7 @@
       "get": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Transfer tokens from one address to another. Note that while this function emits an Approval event, this is not required as per the specification, and other compliant implementations may not emit the event.",
@@ -1378,7 +1378,7 @@
       "post": {
         "security": [
           {
-            "KaleidoAppCredential": []
+            "SEE CONTRIBUTORSAppCredential": []
           }
         ],
         "description": "Transfer tokens from one address to another. Note that while this function emits an Approval event, this is not required as per the specification, and other compliant implementations may not emit the event.",
@@ -1769,7 +1769,7 @@
     }
   },
   "securityDefinitions": {
-    "KaleidoAppCredential": {
+    "SEE CONTRIBUTORSAppCredential": {
       "type": "basic"
     }
   }
