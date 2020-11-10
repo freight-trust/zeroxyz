@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudkafka
+package turbokeeperdkafka
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/golang/mock/gomock"
-	"github.com/freight-trust/zeroxyz/internal/besudkafka/mock_sarama"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdkafka/mock_sarama"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )

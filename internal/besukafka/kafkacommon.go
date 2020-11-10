@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudkafka
+package turbokeeperdkafka
 
 import (
 	"crypto/tls"
@@ -26,8 +26,8 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
-	"github.com/freight-trust/zeroxyz/internal/besudutils"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -48,7 +48,7 @@ type KafkaCommonConf struct {
 		Username string
 		Password string
 	} `json:"sasl"`
-	TLS besudutils.TLSConfig `json:"tls"`
+	TLS turbokeeperdutils.TLSConfig `json:"tls"`
 }
 
 // KafkaCommon is the base interface for bridges that interact with Kafka
@@ -102,16 +102,16 @@ func (k *kafkaCommon) ValidateConf() error {
 // KafkaValidateConf validates supplied configuration
 func KafkaValidateConf(kconf *KafkaCommonConf) (err error) {
 	if kconf.TopicOut == "" {
-		return besuderrors.Errorf(besuderrors.ConfigKafkaMissingOutputTopic)
+		return turbokeeperderrors.Errorf(turbokeeperderrors.ConfigKafkaMissingOutputTopic)
 	}
 	if kconf.TopicIn == "" {
-		return besuderrors.Errorf(besuderrors.ConfigKafkaMissingInputTopic)
+		return turbokeeperderrors.Errorf(turbokeeperderrors.ConfigKafkaMissingInputTopic)
 	}
 	if kconf.ConsumerGroup == "" {
-		return besuderrors.Errorf(besuderrors.ConfigKafkaMissingConsumerGroup)
+		return turbokeeperderrors.Errorf(turbokeeperderrors.ConfigKafkaMissingConsumerGroup)
 	}
-	if !besudutils.AllOrNoneReqd(kconf.SASL.Username, kconf.SASL.Password) {
-		err = besuderrors.Errorf(besuderrors.ConfigKafkaMissingBadSASL)
+	if !turbokeeperdutils.AllOrNoneReqd(kconf.SASL.Username, kconf.SASL.Password) {
+		err = turbokeeperderrors.Errorf(turbokeeperderrors.ConfigKafkaMissingBadSASL)
 		return
 	}
 	return
@@ -166,7 +166,7 @@ func (k *kafkaCommon) connect() (err error) {
 
 	log.Debugf("Kafka Bootstrap brokers: %s", k.conf.Brokers)
 	if len(k.conf.Brokers) == 0 || k.conf.Brokers[0] == "" {
-		err = besuderrors.Errorf(besuderrors.ConfigKafkaMissingBrokers)
+		err = turbokeeperderrors.Errorf(turbokeeperderrors.ConfigKafkaMissingBrokers)
 		return
 	}
 
@@ -174,7 +174,7 @@ func (k *kafkaCommon) connect() (err error) {
 	clientConf := sarama.NewConfig()
 
 	var tlsConfig *tls.Config
-	if tlsConfig, err = besudutils.CreateTLSConfiguration(&k.conf.TLS); err != nil {
+	if tlsConfig, err = turbokeeperdutils.CreateTLSConfiguration(&k.conf.TLS); err != nil {
 		return
 	}
 
@@ -197,7 +197,7 @@ func (k *kafkaCommon) connect() (err error) {
 	clientConf.Net.TLS.Config = tlsConfig
 	clientConf.ClientID = k.conf.ClientID
 	if clientConf.ClientID == "" {
-		clientConf.ClientID = besudutils.UUIDv4()
+		clientConf.ClientID = turbokeeperdutils.UUIDv4()
 	}
 	log.Debugf("Kafka ClientID: %s", clientConf.ClientID)
 

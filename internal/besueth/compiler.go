@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudeth
+package turbokeeperdeth
 
 import (
 	"bytes"
@@ -23,13 +23,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/freight-trust/zeroxyz/internal/besudbind"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ethereum/go-ethereum/common/compiler"
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
 )
 
 const (
@@ -42,7 +42,7 @@ type CompiledSolidity struct {
 	ContractName string
 	Compiled     []byte
 	DevDoc       string
-	ABI          besudbind.ABIMarshaling
+	ABI          turbokeeperdbind.ABIMarshaling
 	ContractInfo *compiler.ContractInfo
 }
 
@@ -67,10 +67,10 @@ func getSolcExecutable(requestedVersion string) (string, error) {
 		if envVar := os.Getenv(envVarName); envVar != "" {
 			solc = envVar
 		} else {
-			return "", besuderrors.Errorf(besuderrors.CompilerVersionNotFound, v[1], v[2])
+			return "", turbokeeperderrors.Errorf(turbokeeperderrors.CompilerVersionNotFound, v[1], v[2])
 		}
 	} else if requestedVersion != "" {
-		return "", besuderrors.Errorf(besuderrors.CompilerVersionBadRequest)
+		return "", turbokeeperderrors.Errorf(turbokeeperderrors.CompilerVersionBadRequest)
 	}
 	log.Debugf("Solidity compiler solc binary: %s", solc)
 	return solc, nil
@@ -114,7 +114,7 @@ func CompileContract(soliditySource, contractName, requestedVersion, evmVersion 
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
-		return nil, besuderrors.Errorf(besuderrors.CompilerFailedSolc, err, stderr.String())
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerFailedSolc, err, stderr.String())
 	}
 	c, _ := compiler.ParseCombinedJSON(stdout.Bytes(), soliditySource, s.Version, s.Version, strings.Join(solcArgs, " "))
 	return ProcessCompiled(c, contractName, true)
@@ -130,11 +130,11 @@ func ProcessCompiled(compiled map[string]*compiler.Contract, contractName string
 			contractName = "<stdin>:" + contractName
 		}
 		if _, ok := compiled[contractName]; !ok {
-			return nil, besuderrors.Errorf(besuderrors.CompilerOutputMissingContract, contractName, contractNames)
+			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerOutputMissingContract, contractName, contractNames)
 		}
 		contract = compiled[contractName]
 	} else if len(contractNames) != 1 {
-		return nil, besuderrors.Errorf(besuderrors.CompilerOutputMultipleContracts, contractNames)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerOutputMultipleContracts, contractNames)
 	} else {
 		contractName = contractNames[0].String()
 		contract = compiled[contractName]
@@ -155,25 +155,25 @@ func packContract(contractName string, contract *compiler.Contract) (c *Compiled
 	}
 	c.Compiled, err = hexutil.Decode(contract.Code)
 	if err != nil {
-		return nil, besuderrors.Errorf(besuderrors.CompilerBytecodeInvalid, err)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerBytecodeInvalid, err)
 	}
 	if len(c.Compiled) == 0 {
-		return nil, besuderrors.Errorf(besuderrors.CompilerBytecodeEmpty, contractName)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerBytecodeEmpty, contractName)
 	}
 	// Pack the arguments for calling the contract
 	abiJSON, err := json.Marshal(contract.Info.AbiDefinition)
 	if err != nil {
-		return nil, besuderrors.Errorf(besuderrors.CompilerABISerialize, err)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerABISerialize, err)
 	}
-	var abi besudbind.ABIMarshaling
+	var abi turbokeeperdbind.ABIMarshaling
 	err = json.Unmarshal(abiJSON, &abi)
 	if err != nil {
-		return nil, besuderrors.Errorf(besuderrors.CompilerABIReRead, err)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerABIReRead, err)
 	}
 	c.ABI = abi
 	devdocBytes, err := json.Marshal(contract.Info.DeveloperDoc)
 	if err != nil {
-		return nil, besuderrors.Errorf(besuderrors.CompilerSerializeDevDocs, err)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerSerializeDevDocs, err)
 	}
 	c.DevDoc = string(devdocBytes)
 	return c, nil

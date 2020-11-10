@@ -15,7 +15,7 @@
 // Moving average logic builds upon
 // https://github.com/RobinUS2/golang-moving-average/blob/master/d.go
 
-package besudtx
+package turbokeeperdtx
 
 import (
 	"time"

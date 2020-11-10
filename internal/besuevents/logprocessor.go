@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudevents
+package turbokeeperdevents
 
 import (
 	"math/big"
@@ -20,21 +20,21 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
-	"github.com/freight-trust/zeroxyz/internal/besudeth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/freight-trust/zeroxyz/internal/besudbind"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
 )
 
 type logEntry struct {
-	Address          besudbind.Address   `json:"address"`
-	BlockNumber      besudbind.HexBigInt `json:"blockNumber"`
-	TransactionIndex besudbind.HexUint   `json:"transactionIndex"`
-	TransactionHash  besudbind.Hash      `json:"transactionHash"`
+	Address          turbokeeperdbind.Address   `json:"address"`
+	BlockNumber      turbokeeperdbind.HexBigInt `json:"blockNumber"`
+	TransactionIndex turbokeeperdbind.HexUint   `json:"transactionIndex"`
+	TransactionHash  turbokeeperdbind.Hash      `json:"transactionHash"`
 	Data             string            `json:"data"`
-	Topics           []*besudbind.Hash   `json:"topics"`
+	Topics           []*turbokeeperdbind.Hash   `json:"topics"`
 	Timestamp        uint64            `json:"timestamp,omitempty"`
 }
 
@@ -54,13 +54,13 @@ type eventData struct {
 
 type logProcessor struct {
 	subID    string
-	event    *besudbind.ABIEvent
+	event    *turbokeeperdbind.ABIEvent
 	stream   *eventStream
 	blockHWM big.Int
 	hwnSync  sync.Mutex
 }
 
-func newLogProcessor(subID string, event *besudbind.ABIEvent, stream *eventStream) *logProcessor {
+func newLogProcessor(subID string, event *turbokeeperdbind.ABIEvent, stream *eventStream) *logProcessor {
 	return &logProcessor{
 		subID:  subID,
 		event:  event,
@@ -97,9 +97,9 @@ func (lp *logProcessor) processLogEntry(subInfo string, entry *logEntry, idx int
 
 	var data []byte
 	if strings.HasPrefix(entry.Data, "0x") {
-		data, err = besudbind.HexDecode(entry.Data)
+		data, err = turbokeeperdbind.HexDecode(entry.Data)
 		if err != nil {
-			return besuderrors.Errorf(besuderrors.EventStreamsLogDecode, subInfo, err)
+			return turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsLogDecode, subInfo, err)
 		}
 	}
 
@@ -108,7 +108,7 @@ func (lp *logProcessor) processLogEntry(subInfo string, entry *logEntry, idx int
 		BlockNumber:      entry.BlockNumber.ToInt().String(),
 		TransactionIndex: entry.TransactionIndex.String(),
 		TransactionHash:  entry.TransactionHash.String(),
-		Signature:        besudbind.ABIEventSignature(lp.event),
+		Signature:        turbokeeperdbind.ABIEventSignature(lp.event),
 		Data:             make(map[string]interface{}),
 		SubID:            lp.subID,
 		LogIndex:         strconv.Itoa(idx),
@@ -123,13 +123,13 @@ func (lp *logProcessor) processLogEntry(subInfo string, entry *logEntry, idx int
 	}
 
 	// We need split out the indexed args that we parse out of the topic, from the data args
-	var dataArgs besudbind.ABIArguments
-	dataArgs = make([]besudbind.ABIArgument, 0, len(lp.event.Inputs))
+	var dataArgs turbokeeperdbind.ABIArguments
+	dataArgs = make([]turbokeeperdbind.ABIArgument, 0, len(lp.event.Inputs))
 	for idx, input := range lp.event.Inputs {
 		var val interface{}
 		if input.Indexed {
 			if topicIdx >= len(entry.Topics) {
-				return besuderrors.Errorf(besuderrors.EventStreamsLogDecodeInsufficientTopics, subInfo, idx, besudbind.ABIEventSignature(lp.event))
+				return turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsLogDecodeInsufficientTopics, subInfo, idx, turbokeeperdbind.ABIEventSignature(lp.event))
 			}
 			topic := entry.Topics[topicIdx]
 			topicIdx++
@@ -146,7 +146,7 @@ func (lp *logProcessor) processLogEntry(subInfo string, entry *logEntry, idx int
 
 	// Retrieve the data args from the RLP and merge the results
 	if len(dataArgs) > 0 {
-		dataMap := besudeth.ProcessRLPBytes(dataArgs, data)
+		dataMap := turbokeeperdeth.ProcessRLPBytes(dataArgs, data)
 		for k, v := range dataMap {
 			result.Data[k] = v
 		}
@@ -158,24 +158,24 @@ func (lp *logProcessor) processLogEntry(subInfo string, entry *logEntry, idx int
 	return nil
 }
 
-func topicToValue(topic *besudbind.Hash, input *besudbind.ABIArgument) interface{} {
+func topicToValue(topic *turbokeeperdbind.Hash, input *turbokeeperdbind.ABIArgument) interface{} {
 	switch input.Type.T {
-	case besudbind.IntTy, besudbind.UintTy, besudbind.BoolTy:
-		h := besudbind.HexBigInt{}
+	case turbokeeperdbind.IntTy, turbokeeperdbind.UintTy, turbokeeperdbind.BoolTy:
+		h := turbokeeperdbind.HexBigInt{}
 		h.UnmarshalText([]byte(topic.Hex()))
 		bI, _ := math.ParseBig256(topic.Hex())
-		if input.Type.T == besudbind.IntTy {
+		if input.Type.T == turbokeeperdbind.IntTy {
 			// It will be a two's complement number, so needs to be interpretted
 			bI = math.S256(bI)
 			return bI.String()
-		} else if input.Type.T == besudbind.BoolTy {
+		} else if input.Type.T == turbokeeperdbind.BoolTy {
 			return (bI.Uint64() != 0)
 		}
 		return bI.String()
-	case besudbind.AddressTy:
+	case turbokeeperdbind.AddressTy:
 		topicBytes := topic.Bytes()
 		addrBytes := topicBytes[len(topicBytes)-20:]
-		return besudbind.BytesToAddress(addrBytes)
+		return turbokeeperdbind.BytesToAddress(addrBytes)
 	default:
 		// For all other types it is just a hash of the output for indexing, so we can only
 		// logically return it as a hex string. The Solidity developer has to include

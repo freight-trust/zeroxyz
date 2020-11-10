@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudrest
+package turbokeeperdrest
 
 import (
 	"encoding/json"
@@ -26,10 +26,10 @@ import (
 	"net/http/httptest"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/besudauth"
-	"github.com/freight-trust/zeroxyz/internal/besudauth/besudauthtest"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
-	"github.com/freight-trust/zeroxyz/internal/besudutils"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth/turbokeeperdauthtest"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
 )
 
 type mockReceiptErrs struct{ err error }
@@ -80,10 +80,10 @@ func TestReplyProcessorWithValidReply(t *testing.T) {
 
 	r, p := newReceiptsTestStore()
 
-	replyMsg := &besudmessages.TransactionReceipt{}
-	replyMsg.Headers.MsgType = besudmessages.MsgTypeTransactionSuccess
-	replyMsg.Headers.ID = besudutils.UUIDv4()
-	replyMsg.Headers.ReqID = besudutils.UUIDv4()
+	replyMsg := &turbokeeperdmessages.TransactionReceipt{}
+	replyMsg.Headers.MsgType = turbokeeperdmessages.MsgTypeTransactionSuccess
+	replyMsg.Headers.ID = turbokeeperdutils.UUIDv4()
+	replyMsg.Headers.ReqID = turbokeeperdutils.UUIDv4()
 	replyMsg.Headers.ReqOffset = "topic:1:2"
 	txHash := common.HexToHash("0x02587104e9879911bea3d5bf6ccd7e1a6cb9a03145b8a1141804cebd6aa67c5c")
 	replyMsg.TransactionHash = &txHash
@@ -103,10 +103,10 @@ func TestReplyProcessorWithContractGWSuccess(t *testing.T) {
 	r, p := newReceiptsTestStore()
 	r.smartContractGW = &mockContractGW{}
 
-	replyMsg := &besudmessages.TransactionReceipt{}
-	replyMsg.Headers.MsgType = besudmessages.MsgTypeTransactionSuccess
-	replyMsg.Headers.ID = besudutils.UUIDv4()
-	replyMsg.Headers.ReqID = besudutils.UUIDv4()
+	replyMsg := &turbokeeperdmessages.TransactionReceipt{}
+	replyMsg.Headers.MsgType = turbokeeperdmessages.MsgTypeTransactionSuccess
+	replyMsg.Headers.ID = turbokeeperdutils.UUIDv4()
+	replyMsg.Headers.ReqID = turbokeeperdutils.UUIDv4()
 	replyMsg.Headers.ReqOffset = "topic:1:2"
 	txHash := common.HexToHash("0x02587104e9879911bea3d5bf6ccd7e1a6cb9a03145b8a1141804cebd6aa67c5c")
 	replyMsg.TransactionHash = &txHash
@@ -130,10 +130,10 @@ func TestReplyProcessorWithContractGWFailure(t *testing.T) {
 		postDeployErr: fmt.Errorf("pop"),
 	}
 
-	replyMsg := &besudmessages.TransactionReceipt{}
-	replyMsg.Headers.MsgType = besudmessages.MsgTypeTransactionSuccess
-	replyMsg.Headers.ID = besudutils.UUIDv4()
-	replyMsg.Headers.ReqID = besudutils.UUIDv4()
+	replyMsg := &turbokeeperdmessages.TransactionReceipt{}
+	replyMsg.Headers.MsgType = turbokeeperdmessages.MsgTypeTransactionSuccess
+	replyMsg.Headers.ID = turbokeeperdutils.UUIDv4()
+	replyMsg.Headers.ReqID = turbokeeperdutils.UUIDv4()
 	replyMsg.Headers.ReqOffset = "topic:1:2"
 	txHash := common.HexToHash("0x02587104e9879911bea3d5bf6ccd7e1a6cb9a03145b8a1141804cebd6aa67c5c")
 	replyMsg.TransactionHash = &txHash
@@ -155,7 +155,7 @@ func TestReplyProcessorWithContractGWBadReceipt(t *testing.T) {
 
 	replyMsg := map[string]interface{}{
 		"headers": map[string]interface{}{
-			"type":      besudmessages.MsgTypeTransactionSuccess,
+			"type":      turbokeeperdmessages.MsgTypeTransactionSuccess,
 			"requestId": "123",
 		},
 		"contractAddress": "bad address", // cannot parse as address
@@ -173,10 +173,10 @@ func TestReplyProcessorWithInvalidReplySwallowsErr(t *testing.T) {
 func TestReplyProcessorWithPeristenceErrorSwallows(t *testing.T) {
 	r := newReceiptsErrTestStore(fmt.Errorf("pop"))
 
-	replyMsg := &besudmessages.TransactionReceipt{}
-	replyMsg.Headers.MsgType = besudmessages.MsgTypeTransactionSuccess
-	replyMsg.Headers.ID = besudutils.UUIDv4()
-	replyMsg.Headers.ReqID = besudutils.UUIDv4()
+	replyMsg := &turbokeeperdmessages.TransactionReceipt{}
+	replyMsg.Headers.MsgType = turbokeeperdmessages.MsgTypeTransactionSuccess
+	replyMsg.Headers.ID = turbokeeperdutils.UUIDv4()
+	replyMsg.Headers.ReqID = turbokeeperdutils.UUIDv4()
 	replyMsg.Headers.ReqOffset = "topic:1:2"
 	txHash := common.HexToHash("0x02587104e9879911bea3d5bf6ccd7e1a6cb9a03145b8a1141804cebd6aa67c5c")
 	replyMsg.TransactionHash = &txHash
@@ -190,10 +190,10 @@ func TestReplyProcessorWithErrorReply(t *testing.T) {
 
 	r, p := newReceiptsTestStore()
 
-	replyMsg := &besudmessages.ErrorReply{}
-	replyMsg.Headers.MsgType = besudmessages.MsgTypeError
-	replyMsg.Headers.ID = besudutils.UUIDv4()
-	replyMsg.Headers.ReqID = besudutils.UUIDv4()
+	replyMsg := &turbokeeperdmessages.ErrorReply{}
+	replyMsg.Headers.MsgType = turbokeeperdmessages.MsgTypeError
+	replyMsg.Headers.ID = turbokeeperdutils.UUIDv4()
+	replyMsg.Headers.ReqID = turbokeeperdutils.UUIDv4()
 	replyMsg.Headers.ReqOffset = "topic:1:2"
 	replyMsg.OriginalMessage = "{\"badness\": true}"
 	replyMsg.ErrorMessage = "pop"
@@ -225,7 +225,7 @@ func TestReplyProcessorMissingRequestId(t *testing.T) {
 
 	r, p := newReceiptsTestStore()
 
-	replyMsg := &besudmessages.ErrorReply{}
+	replyMsg := &turbokeeperdmessages.ErrorReply{}
 	replyMsgBytes, _ := json.Marshal(&replyMsg)
 
 	r.processReply(replyMsgBytes)
@@ -238,8 +238,8 @@ func TestReplyProcessorInsertError(t *testing.T) {
 
 	r, p := newReceiptsTestStore()
 
-	replyMsg := &besudmessages.ErrorReply{}
-	replyMsg.Headers.ReqID = besudutils.UUIDv4()
+	replyMsg := &turbokeeperdmessages.ErrorReply{}
+	replyMsg.Headers.ReqID = turbokeeperdutils.UUIDv4()
 	replyMsgBytes, _ := json.Marshal(&replyMsg)
 
 	r.processReply(replyMsgBytes)
@@ -500,7 +500,7 @@ func TestGetRepliesExcessiveLimit(t *testing.T) {
 }
 
 func TestGetRepliesUnauthorized(t *testing.T) {
-	besudauth.RegisterSecurityModule(&besudauthtest.TestSecurityModule{})
+	turbokeeperdauth.RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
 
 	assert := assert.New(t)
 	_, _, ts := newReceiptsTestServer()
@@ -511,11 +511,11 @@ func TestGetRepliesUnauthorized(t *testing.T) {
 	assert.Equal(401, status)
 	assert.Equal("Unauthorized", respJSON["error"])
 
-	besudauth.RegisterSecurityModule(nil)
+	turbokeeperdauth.RegisterSecurityModule(nil)
 }
 
 func TestGetReplyUnauthorized(t *testing.T) {
-	besudauth.RegisterSecurityModule(&besudauthtest.TestSecurityModule{})
+	turbokeeperdauth.RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
 
 	assert := assert.New(t)
 	_, _, ts := newReceiptsTestServer()
@@ -526,5 +526,5 @@ func TestGetReplyUnauthorized(t *testing.T) {
 	assert.Equal(401, status)
 	assert.Equal("Unauthorized", respJSON["error"])
 
-	besudauth.RegisterSecurityModule(nil)
+	turbokeeperdauth.RegisterSecurityModule(nil)
 }

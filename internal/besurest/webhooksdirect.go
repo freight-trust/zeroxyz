@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudrest
+package turbokeeperdrest
 
 import (
 	"context"
@@ -21,19 +21,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
-	"github.com/freight-trust/zeroxyz/internal/besudeth"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
-	"github.com/freight-trust/zeroxyz/internal/besudtx"
-	"github.com/freight-trust/zeroxyz/internal/besudutils"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdtx"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
 	log "github.com/sirupsen/logrus"
 )
 
 // WebhooksDirectConf defines the YAML structore for a Webhooks direct to RPC bridge
 type WebhooksDirectConf struct {
 	MaxInFlight int `json:"maxInFlight"`
-	besudtx.TxnProcessorConf
-	besudeth.RPCConf
+	turbokeeperdtx.TxnProcessorConf
+	turbokeeperdeth.RPCConf
 }
 
 // webhooksDirect provides the HTTP -> Kafka bridge functionality for zeroxyz
@@ -41,13 +41,13 @@ type webhooksDirect struct {
 	initialized   bool
 	receipts      *receiptStore
 	conf          *WebhooksDirectConf
-	processor     besudtx.TxnProcessor
+	processor     turbokeeperdtx.TxnProcessor
 	inFlightMutex sync.Mutex
 	inFlight      map[string]*msgContext
 	stopChan      chan error
 }
 
-func newWebhooksDirect(conf *WebhooksDirectConf, processor besudtx.TxnProcessor, receipts *receiptStore) *webhooksDirect {
+func newWebhooksDirect(conf *WebhooksDirectConf, processor turbokeeperdtx.TxnProcessor, receipts *receiptStore) *webhooksDirect {
 	return &webhooksDirect{
 		processor: processor,
 		receipts:  receipts,
@@ -64,14 +64,14 @@ type msgContext struct {
 	key          string
 	msgID        string
 	msg          map[string]interface{}
-	headers      *besudmessages.CommonHeaders
+	headers      *turbokeeperdmessages.CommonHeaders
 }
 
 func (t *msgContext) Context() context.Context {
 	return t.ctx
 }
 
-func (t *msgContext) Headers() *besudmessages.CommonHeaders {
+func (t *msgContext) Headers() *turbokeeperdmessages.CommonHeaders {
 	return t.headers
 }
 
@@ -94,17 +94,17 @@ func (t *msgContext) SendErrorReplyWithGapFill(status int, err error, gapFillTxH
 func (t *msgContext) SendErrorReplyWithTX(status int, err error, txHash string) {
 	log.Warnf("Failed to process message %s: %s", t, err)
 	origBytes, _ := json.Marshal(t.msg)
-	errMsg := besudmessages.NewErrorReply(err, origBytes)
+	errMsg := turbokeeperdmessages.NewErrorReply(err, origBytes)
 	errMsg.TXHash = txHash
 	t.Reply(errMsg)
 }
 
-func (t *msgContext) Reply(replyMessage besudmessages.ReplyWithHeaders) {
+func (t *msgContext) Reply(replyMessage turbokeeperdmessages.ReplyWithHeaders) {
 	t.w.inFlightMutex.Lock()
 	defer t.w.inFlightMutex.Unlock()
 
 	replyHeaders := replyMessage.ReplyHeaders()
-	replyHeaders.ID = besudutils.UUIDv4()
+	replyHeaders.ID = turbokeeperdutils.UUIDv4()
 	replyHeaders.Context = t.headers.Context
 	replyHeaders.ReqID = t.headers.ID
 	replyHeaders.Received = t.timeReceived.UTC().Format(time.RFC3339Nano)
@@ -126,10 +126,10 @@ func (w *webhooksDirect) sendWebhookMsg(ctx context.Context, key, msgID string, 
 	if numInFlight >= w.conf.MaxInFlight {
 		w.inFlightMutex.Unlock()
 		log.Errorf("Failed to dispatch mesage from '%s': %d/%d already in-flight", key, numInFlight, w.conf.MaxInFlight)
-		return "", 429, besuderrors.Errorf(besuderrors.WebhooksDirectTooManyInflight)
+		return "", 429, turbokeeperderrors.Errorf(turbokeeperderrors.WebhooksDirectTooManyInflight)
 	}
 
-	var headers besudmessages.CommonHeaders
+	var headers turbokeeperdmessages.CommonHeaders
 	var headerBytes []byte
 	var err error
 	headersMap := msg["headers"]
@@ -139,7 +139,7 @@ func (w *webhooksDirect) sendWebhookMsg(ctx context.Context, key, msgID string, 
 	if err != nil {
 		w.inFlightMutex.Unlock()
 		log.Errorf("Unable to unmarshal headers from map payload: %+v: %s", msg, err)
-		return "", 400, besuderrors.Errorf(besuderrors.WebhooksDirectBadHeaders)
+		return "", 400, turbokeeperderrors.Errorf(turbokeeperderrors.WebhooksDirectBadHeaders)
 	}
 	msgContext := &msgContext{
 		ctx:          ctx,
@@ -159,7 +159,7 @@ func (w *webhooksDirect) sendWebhookMsg(ctx context.Context, key, msgID string, 
 
 func validateWebhooksDirectConf(conf *WebhooksDirectConf) error {
 	if conf.RPC.URL == "" {
-		return besuderrors.Errorf(besuderrors.ConfigWebhooksDirectRPC)
+		return turbokeeperderrors.Errorf(turbokeeperderrors.ConfigWebhooksDirectRPC)
 	}
 	if conf.MaxTXWaitTime < 10 {
 		if conf.MaxTXWaitTime > 0 {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudcontracts
+package turbokeeperdcontracts
 
 import (
 	"context"
@@ -29,46 +29,46 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/besudauth"
-	"github.com/freight-trust/zeroxyz/internal/besudbind"
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
-	"github.com/freight-trust/zeroxyz/internal/besudeth"
-	"github.com/freight-trust/zeroxyz/internal/besudevents"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
-	"github.com/freight-trust/zeroxyz/internal/besudtx"
-	"github.com/freight-trust/zeroxyz/internal/besudutils"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdevents"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdtx"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
 
 	log "github.com/sirupsen/logrus"
 )
 
 // REST2EthAsyncDispatcher is passed in to process messages over a streaming system with
-// a receipt store. Only used for POST methods, when besud-sync is not set to true
+// a receipt store. Only used for POST methods, when turbokeeperd-sync is not set to true
 type REST2EthAsyncDispatcher interface {
-	DispatchMsgAsync(ctx context.Context, msg map[string]interface{}, ack bool) (*besudmessages.AsyncSentMsg, error)
+	DispatchMsgAsync(ctx context.Context, msg map[string]interface{}, ack bool) (*turbokeeperdmessages.AsyncSentMsg, error)
 }
 
 // rest2EthSyncDispatcher abstracts the processing of the transactions and queries
 // synchronously. We perform those within this package.
 type rest2EthSyncDispatcher interface {
-	DispatchSendTransactionSync(ctx context.Context, msg *besudmessages.SendTransaction, replyProcessor rest2EthReplyProcessor)
-	DispatchDeployContractSync(ctx context.Context, msg *besudmessages.DeployContract, replyProcessor rest2EthReplyProcessor)
+	DispatchSendTransactionSync(ctx context.Context, msg *turbokeeperdmessages.SendTransaction, replyProcessor rest2EthReplyProcessor)
+	DispatchDeployContractSync(ctx context.Context, msg *turbokeeperdmessages.DeployContract, replyProcessor rest2EthReplyProcessor)
 }
 
 // rest2EthReplyProcessor interface
 type rest2EthReplyProcessor interface {
 	ReplyWithError(err error)
-	ReplyWithReceipt(receipt besudmessages.ReplyWithHeaders)
-	ReplyWithReceiptAndError(receipt besudmessages.ReplyWithHeaders, err error)
+	ReplyWithReceipt(receipt turbokeeperdmessages.ReplyWithHeaders)
+	ReplyWithReceiptAndError(receipt turbokeeperdmessages.ReplyWithHeaders, err error)
 }
 
-// rest2eth provides the HTTP <-> besudmessages translation and dispatches for processing
+// rest2eth provides the HTTP <-> turbokeeperdmessages translation and dispatches for processing
 type rest2eth struct {
 	gw              smartContractGatewayInt
-	rpc             besudeth.RPCClient
-	processor       besudtx.TxnProcessor
+	rpc             turbokeeperdeth.RPCClient
+	processor       turbokeeperdtx.TxnProcessor
 	asyncDispatcher REST2EthAsyncDispatcher
 	syncDispatcher  rest2EthSyncDispatcher
-	subMgr          besudevents.SubscriptionManager
+	subMgr          turbokeeperdevents.SubscriptionManager
 	rr              RemoteRegistry
 }
 
@@ -82,7 +82,7 @@ type restAsyncMsg struct {
 
 type restReceiptAndError struct {
 	Message string `json:"error"`
-	besudmessages.ReplyWithHeaders
+	turbokeeperdmessages.ReplyWithHeaders
 }
 
 // rest2EthInflight is instantiated for each async reply in flight
@@ -103,7 +103,7 @@ func (i *rest2EthSyncResponder) ReplyWithError(err error) {
 	return
 }
 
-func (i *rest2EthSyncResponder) ReplyWithReceiptAndError(receipt besudmessages.ReplyWithHeaders, err error) {
+func (i *rest2EthSyncResponder) ReplyWithReceiptAndError(receipt turbokeeperdmessages.ReplyWithHeaders, err error) {
 	status := 500
 	reply, _ := json.MarshalIndent(&restReceiptAndError{err.Error(), receipt}, "", "  ")
 	log.Infof("<-- %s %s [%d]", i.req.Method, i.req.URL, status)
@@ -116,7 +116,7 @@ func (i *rest2EthSyncResponder) ReplyWithReceiptAndError(receipt besudmessages.R
 	return
 }
 
-func (i *rest2EthSyncResponder) ReplyWithReceipt(receipt besudmessages.ReplyWithHeaders) {
+func (i *rest2EthSyncResponder) ReplyWithReceipt(receipt turbokeeperdmessages.ReplyWithHeaders) {
 	txReceiptMsg := receipt.IsReceipt()
 	if txReceiptMsg != nil && txReceiptMsg.ContractAddress != nil {
 		if err := i.r.gw.PostDeploy(txReceiptMsg); err != nil {
@@ -126,7 +126,7 @@ func (i *rest2EthSyncResponder) ReplyWithReceipt(receipt besudmessages.ReplyWith
 		}
 	}
 	status := 200
-	if receipt.ReplyHeaders().MsgType != besudmessages.MsgTypeTransactionSuccess {
+	if receipt.ReplyHeaders().MsgType != turbokeeperdmessages.MsgTypeTransactionSuccess {
 		status = 500
 	}
 	reply, _ := json.MarshalIndent(receipt, "", "  ")
@@ -140,7 +140,7 @@ func (i *rest2EthSyncResponder) ReplyWithReceipt(receipt besudmessages.ReplyWith
 	return
 }
 
-func newREST2eth(gw smartContractGatewayInt, rpc besudeth.RPCClient, subMgr besudevents.SubscriptionManager, rr RemoteRegistry, processor besudtx.TxnProcessor, asyncDispatcher REST2EthAsyncDispatcher, syncDispatcher rest2EthSyncDispatcher) *rest2eth {
+func newREST2eth(gw smartContractGatewayInt, rpc turbokeeperdeth.RPCClient, subMgr turbokeeperdevents.SubscriptionManager, rr RemoteRegistry, processor turbokeeperdtx.TxnProcessor, asyncDispatcher REST2EthAsyncDispatcher, syncDispatcher rest2EthSyncDispatcher) *rest2eth {
 	return &rest2eth{
 		gw:              gw,
 		processor:       processor,
@@ -187,18 +187,18 @@ type restCmd struct {
 	from          string
 	addr          string
 	value         json.Number
-	abiMethod     *besudbind.ABIMethod
-	abiMethodElem *besudbind.ABIElementMarshaling
-	abiEvent      *besudbind.ABIEvent
-	abiEventElem  *besudbind.ABIElementMarshaling
+	abiMethod     *turbokeeperdbind.ABIMethod
+	abiMethodElem *turbokeeperdbind.ABIElementMarshaling
+	abiEvent      *turbokeeperdbind.ABIEvent
+	abiEventElem  *turbokeeperdbind.ABIElementMarshaling
 	isDeploy      bool
-	deployMsg     *besudmessages.DeployContract
+	deployMsg     *turbokeeperdmessages.DeployContract
 	body          map[string]interface{}
 	msgParams     []interface{}
 	blocknumber   string
 }
 
-func (r *rest2eth) resolveABI(res http.ResponseWriter, req *http.Request, params httprouter.Params, c *restCmd, addrParam string, refresh bool) (a besudbind.ABIMarshaling, validAddress bool, err error) {
+func (r *rest2eth) resolveABI(res http.ResponseWriter, req *http.Request, params httprouter.Params, c *restCmd, addrParam string, refresh bool) (a turbokeeperdbind.ABIMarshaling, validAddress bool, err error) {
 	c.addr = strings.ToLower(strings.TrimPrefix(addrParam, "0x"))
 	validAddress = addrCheck.MatchString(c.addr)
 
@@ -215,7 +215,7 @@ func (r *rest2eth) resolveABI(res http.ResponseWriter, req *http.Request, params
 			r.restErrReply(res, req, err, 500)
 			return
 		} else if c.deployMsg == nil {
-			err = besuderrors.Errorf(besuderrors.RESTGatewayGatewayNotFound)
+			err = turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayGatewayNotFound)
 			r.restErrReply(res, req, err, 404)
 			return
 		}
@@ -226,7 +226,7 @@ func (r *rest2eth) resolveABI(res http.ResponseWriter, req *http.Request, params
 			r.restErrReply(res, req, err, 500)
 			return
 		} else if msg == nil {
-			err = besuderrors.Errorf(besuderrors.RESTGatewayInstanceNotFound)
+			err = turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayInstanceNotFound)
 			r.restErrReply(res, req, err, 404)
 			return
 		}
@@ -263,12 +263,12 @@ func (r *rest2eth) resolveABI(res http.ResponseWriter, req *http.Request, params
 	return
 }
 
-func (r *rest2eth) resolveMethod(res http.ResponseWriter, req *http.Request, c *restCmd, a besudbind.ABIMarshaling, methodParam string) (err error) {
+func (r *rest2eth) resolveMethod(res http.ResponseWriter, req *http.Request, c *restCmd, a turbokeeperdbind.ABIMarshaling, methodParam string) (err error) {
 	for _, element := range a {
 		if element.Type == "function" && element.Name == methodParam {
 			c.abiMethodElem = &element
-			if c.abiMethod, err = besudbind.ABIElementMarshalingToABIMethod(&element); err != nil {
-				err = besuderrors.Errorf(besuderrors.RESTGatewayMethodABIInvalid, methodParam, err)
+			if c.abiMethod, err = turbokeeperdbind.ABIElementMarshalingToABIMethod(&element); err != nil {
+				err = turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayMethodABIInvalid, methodParam, err)
 				r.restErrReply(res, req, err, 400)
 				return
 			}
@@ -278,12 +278,12 @@ func (r *rest2eth) resolveMethod(res http.ResponseWriter, req *http.Request, c *
 	return
 }
 
-func (r *rest2eth) resolveConstructor(res http.ResponseWriter, req *http.Request, c *restCmd, a besudbind.ABIMarshaling) (err error) {
+func (r *rest2eth) resolveConstructor(res http.ResponseWriter, req *http.Request, c *restCmd, a turbokeeperdbind.ABIMarshaling) (err error) {
 	for _, element := range a {
 		if element.Type == "constructor" {
 			c.abiMethodElem = &element
-			if c.abiMethod, err = besudbind.ABIElementMarshalingToABIMethod(&element); err != nil {
-				err = besuderrors.Errorf(besuderrors.RESTGatewayMethodABIInvalid, "constructor", err)
+			if c.abiMethod, err = turbokeeperdbind.ABIElementMarshalingToABIMethod(&element); err != nil {
+				err = turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayMethodABIInvalid, "constructor", err)
 				r.restErrReply(res, req, err, 400)
 				return
 			}
@@ -293,17 +293,17 @@ func (r *rest2eth) resolveConstructor(res http.ResponseWriter, req *http.Request
 	}
 	if !c.isDeploy {
 		// Default constructor
-		c.abiMethodElem = &besudbind.ABIElementMarshaling{
+		c.abiMethodElem = &turbokeeperdbind.ABIElementMarshaling{
 			Type: "constructor",
 		}
-		c.abiMethod, _ = besudbind.ABIElementMarshalingToABIMethod(c.abiMethodElem)
+		c.abiMethod, _ = turbokeeperdbind.ABIElementMarshalingToABIMethod(c.abiMethodElem)
 		c.isDeploy = true
 	}
 	return
 }
 
-func (r *rest2eth) resolveEvent(res http.ResponseWriter, req *http.Request, c *restCmd, a besudbind.ABIMarshaling, methodParam, methodParamLC, addrParam string) (err error) {
-	var eventDef *besudbind.ABIElementMarshaling
+func (r *rest2eth) resolveEvent(res http.ResponseWriter, req *http.Request, c *restCmd, a turbokeeperdbind.ABIMarshaling, methodParam, methodParamLC, addrParam string) (err error) {
+	var eventDef *turbokeeperdbind.ABIElementMarshaling
 	for _, element := range a {
 		if element.Type == "event" {
 			if element.Name == methodParam {
@@ -319,8 +319,8 @@ func (r *rest2eth) resolveEvent(res http.ResponseWriter, req *http.Request, c *r
 	}
 	if eventDef != nil {
 		c.abiEventElem = eventDef
-		if c.abiEvent, err = besudbind.ABIElementMarshalingToABIEvent(eventDef); err != nil {
-			err = besuderrors.Errorf(besuderrors.RESTGatewayEventABIInvalid, eventDef.Name, err)
+		if c.abiEvent, err = turbokeeperdbind.ABIElementMarshalingToABIEvent(eventDef); err != nil {
+			err = turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayEventABIInvalid, eventDef.Name, err)
 			r.restErrReply(res, req, err, 400)
 			return
 		}
@@ -370,11 +370,11 @@ func (r *rest2eth) resolveParams(res http.ResponseWriter, req *http.Request, par
 	// If we didn't find the method or event, report to the user
 	if c.abiMethod == nil && c.abiEvent == nil {
 		if methodParamLC == "subscribe" {
-			err = besuderrors.Errorf(besuderrors.RESTGatewayEventNotDeclared, methodParam)
+			err = turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayEventNotDeclared, methodParam)
 			r.restErrReply(res, req, err, 404)
 			return
 		}
-		err = besuderrors.Errorf(besuderrors.RESTGatewayMethodNotDeclared, url.QueryEscape(methodParam), c.addr)
+		err = turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayMethodNotDeclared, url.QueryEscape(methodParam), c.addr)
 		r.restErrReply(res, req, err, 404)
 		return
 	}
@@ -382,7 +382,7 @@ func (r *rest2eth) resolveParams(res http.ResponseWriter, req *http.Request, par
 	// If we have an address, it must be valid
 	if c.addr != "" && !validAddress {
 		log.Errorf("Invalid to address: '%s'", params.ByName("address"))
-		err = besuderrors.Errorf(besuderrors.RESTGatewayInvalidToAddress)
+		err = turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayInvalidToAddress)
 		r.restErrReply(res, req, err, 404)
 		return
 	}
@@ -391,23 +391,23 @@ func (r *rest2eth) resolveParams(res http.ResponseWriter, req *http.Request, par
 	}
 
 	// If we have a from, it needs to be a valid address
-	besudFrom := getKLDParam("from", req, false)
+	turbokeeperdFrom := getKLDParam("from", req, false)
 	fromNo0xPrefix := strings.ToLower(strings.TrimPrefix(getKLDParam("from", req, false), "0x"))
 	if fromNo0xPrefix != "" {
 		if addrCheck.MatchString(fromNo0xPrefix) {
 			c.from = "0x" + fromNo0xPrefix
-		} else if besudtx.IsHDWalletRequest(fromNo0xPrefix) != nil {
+		} else if turbokeeperdtx.IsHDWalletRequest(fromNo0xPrefix) != nil {
 			c.from = fromNo0xPrefix
 		} else {
-			log.Errorf("Invalid from address: '%s'", besudFrom)
-			err = besuderrors.Errorf(besuderrors.RESTGatewayInvalidFromAddress)
+			log.Errorf("Invalid from address: '%s'", turbokeeperdFrom)
+			err = turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayInvalidFromAddress)
 			r.restErrReply(res, req, err, 404)
 			return
 		}
 	}
 	c.value = json.Number(getKLDParam("ethvalue", req, false))
 
-	c.body, err = besudutils.YAMLorJSONPayload(req)
+	c.body, err = turbokeeperdutils.YAMLorJSONPayload(req)
 	if err != nil {
 		r.restErrReply(res, req, err, 400)
 		return
@@ -434,7 +434,7 @@ func (r *rest2eth) resolveParams(res http.ResponseWriter, req *http.Request, par
 		} else if vs := queryParams[argName]; len(vs) > 0 {
 			c.msgParams[i] = vs[0]
 		} else {
-			err = besuderrors.Errorf(besuderrors.RESTGatewayMissingParameter, argName, c.abiMethod.Name)
+			err = turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayMissingParameter, argName, c.abiMethod.Name)
 			r.restErrReply(res, req, err, 400)
 			return
 		}
@@ -457,7 +457,7 @@ func (r *rest2eth) restHandler(res http.ResponseWriter, req *http.Request, param
 		r.subscribeEvent(res, req, c.addr, c.abiEventElem, c.body)
 	} else if (req.Method == http.MethodPost && !c.abiMethod.IsConstant()) && strings.ToLower(getKLDParam("call", req, true)) != "true" {
 		if c.from == "" {
-			err = besuderrors.Errorf(besuderrors.RESTGatewayMissingFromAddress)
+			err = turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayMissingFromAddress)
 			r.restErrReply(res, req, err, 400)
 		} else if c.isDeploy {
 			r.deployContract(res, req, c.from, c.value, c.abiMethodElem, c.deployMsg, c.msgParams)
@@ -478,12 +478,12 @@ func (r *rest2eth) fromBodyOrForm(req *http.Request, body map[string]interface{}
 	return req.FormValue(param)
 }
 
-func (r *rest2eth) subscribeEvent(res http.ResponseWriter, req *http.Request, addrStr string, abiEvent *besudbind.ABIElementMarshaling, body map[string]interface{}) {
+func (r *rest2eth) subscribeEvent(res http.ResponseWriter, req *http.Request, addrStr string, abiEvent *turbokeeperdbind.ABIElementMarshaling, body map[string]interface{}) {
 
-	err := besudauth.AuthEventStreams(req.Context())
+	err := turbokeeperdauth.AuthEventStreams(req.Context())
 	if err != nil {
 		log.Errorf("Unauthorized: %s", err)
-		r.restErrReply(res, req, besuderrors.Errorf(besuderrors.Unauthorized), 401)
+		r.restErrReply(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.Unauthorized), 401)
 		return
 	}
 
@@ -493,7 +493,7 @@ func (r *rest2eth) subscribeEvent(res http.ResponseWriter, req *http.Request, ad
 	}
 	streamID := r.fromBodyOrForm(req, body, "stream")
 	if streamID == "" {
-		r.restErrReply(res, req, besuderrors.Errorf(besuderrors.RESTGatewaySubscribeMissingStreamParameter), 400)
+		r.restErrReply(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewaySubscribeMissingStreamParameter), 400)
 		return
 	}
 	fromBlock := r.fromBodyOrForm(req, body, "fromBlock")
@@ -528,7 +528,7 @@ func (r *rest2eth) doubleURLDecode(s string) string {
 	return strings.ReplaceAll(doubleDecoded, " ", "+")
 }
 
-func (r *rest2eth) addPrivateTx(msg *besudmessages.TransactionCommon, req *http.Request, res http.ResponseWriter) error {
+func (r *rest2eth) addPrivateTx(msg *turbokeeperdmessages.TransactionCommon, req *http.Request, res http.ResponseWriter) error {
 	msg.PrivateFrom = r.doubleURLDecode(getKLDParam("privatefrom", req, false))
 	msg.PrivateFor = getKLDParamMulti("privatefor", req)
 	for idx, val := range msg.PrivateFor {
@@ -536,14 +536,14 @@ func (r *rest2eth) addPrivateTx(msg *besudmessages.TransactionCommon, req *http.
 	}
 	msg.PrivacyGroupID = r.doubleURLDecode(getKLDParam("privacygroupid", req, false))
 	if len(msg.PrivateFor) > 0 && msg.PrivacyGroupID != "" {
-		return besuderrors.Errorf(besuderrors.RESTGatewayMixedPrivateForAndGroupID)
+		return turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayMixedPrivateForAndGroupID)
 	}
 	return nil
 }
 
-func (r *rest2eth) deployContract(res http.ResponseWriter, req *http.Request, from string, value json.Number, abiMethodElem *besudbind.ABIElementMarshaling, deployMsg *besudmessages.DeployContract, msgParams []interface{}) {
+func (r *rest2eth) deployContract(res http.ResponseWriter, req *http.Request, from string, value json.Number, abiMethodElem *turbokeeperdbind.ABIElementMarshaling, deployMsg *turbokeeperdmessages.DeployContract, msgParams []interface{}) {
 
-	deployMsg.Headers.MsgType = besudmessages.MsgTypeDeployContract
+	deployMsg.Headers.MsgType = turbokeeperdmessages.MsgTypeDeployContract
 	deployMsg.From = from
 	deployMsg.Gas = json.Number(getKLDParam("gas", req, false))
 	deployMsg.GasPrice = json.Number(getKLDParam("gasprice", req, false))
@@ -590,10 +590,10 @@ func (r *rest2eth) deployContract(res http.ResponseWriter, req *http.Request, fr
 	return
 }
 
-func (r *rest2eth) sendTransaction(res http.ResponseWriter, req *http.Request, from, addr string, value json.Number, abiMethodElem *besudbind.ABIElementMarshaling, msgParams []interface{}) {
+func (r *rest2eth) sendTransaction(res http.ResponseWriter, req *http.Request, from, addr string, value json.Number, abiMethodElem *turbokeeperdbind.ABIElementMarshaling, msgParams []interface{}) {
 
-	msg := &besudmessages.SendTransaction{}
-	msg.Headers.MsgType = besudmessages.MsgTypeSendTransaction
+	msg := &turbokeeperdmessages.SendTransaction{}
+	msg.Headers.MsgType = turbokeeperdmessages.MsgTypeSendTransaction
 	msg.Method = abiMethodElem
 	msg.To = addr
 	msg.From = from
@@ -643,7 +643,7 @@ func (r *rest2eth) callContract(res http.ResponseWriter, req *http.Request, from
 		return
 	}
 
-	resBody, err := besudeth.CallMethod(req.Context(), r.rpc, nil, from, addr, value, abiMethod, msgParams, blocknumber)
+	resBody, err := turbokeeperdeth.CallMethod(req.Context(), r.rpc, nil, from, addr, value, abiMethod, msgParams, blocknumber)
 	if err != nil {
 		r.restErrReply(res, req, err, 500)
 		return
@@ -658,7 +658,7 @@ func (r *rest2eth) callContract(res http.ResponseWriter, req *http.Request, from
 	return
 }
 
-func (r *rest2eth) restAsyncReply(res http.ResponseWriter, req *http.Request, asyncResponse *besudmessages.AsyncSentMsg) {
+func (r *rest2eth) restAsyncReply(res http.ResponseWriter, req *http.Request, asyncResponse *turbokeeperdmessages.AsyncSentMsg) {
 	resBytes, _ := json.Marshal(asyncResponse)
 	status := 202 // accepted
 	log.Infof("<-- %s %s [%d]:\n%s", req.Method, req.URL, status, string(resBytes))

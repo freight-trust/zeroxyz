@@ -12,24 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudcontracts
+package turbokeeperdcontracts
 
 import (
 	"context"
 	"fmt"
 	"testing"
 
-	"github.com/freight-trust/zeroxyz/internal/besudeth"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
-	"github.com/freight-trust/zeroxyz/internal/besudtx"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdtx"
 	"github.com/stretchr/testify/assert"
 )
 
 type mockProcessor struct {
 	t            *testing.T
-	headers      *besudmessages.CommonHeaders
+	headers      *turbokeeperdmessages.CommonHeaders
 	err          error
-	reply        besudmessages.ReplyWithHeaders
+	reply        turbokeeperdmessages.ReplyWithHeaders
 	unmarshalErr error
 	badUnmarshal bool
 	resolvedFrom string
@@ -39,12 +39,12 @@ func (p *mockProcessor) ResolveAddress(from string) (resolvedFrom string, err er
 	return p.resolvedFrom, p.err
 }
 
-func (p *mockProcessor) OnMessage(c besudtx.TxnContext) {
+func (p *mockProcessor) OnMessage(c turbokeeperdtx.TxnContext) {
 	p.headers = c.Headers()
 	ctx := c.(*syncTxInflight)
 	if p.badUnmarshal {
 		// Send something unexpected
-		p.unmarshalErr = c.Unmarshal(&besudmessages.ErrorReply{})
+		p.unmarshalErr = c.Unmarshal(&turbokeeperdmessages.ErrorReply{})
 	} else if ctx.sendMsg != nil {
 		p.unmarshalErr = c.Unmarshal(ctx.sendMsg)
 	} else {
@@ -57,22 +57,22 @@ func (p *mockProcessor) OnMessage(c besudtx.TxnContext) {
 		c.Reply(p.reply)
 	}
 }
-func (p *mockProcessor) Init(besudeth.RPCClient) {}
+func (p *mockProcessor) Init(turbokeeperdeth.RPCClient) {}
 
 type mockReplyProcessor struct {
 	err     error
-	receipt besudmessages.ReplyWithHeaders
+	receipt turbokeeperdmessages.ReplyWithHeaders
 }
 
 func (p *mockReplyProcessor) ReplyWithError(err error) {
 	p.err = err
 }
 
-func (p *mockReplyProcessor) ReplyWithReceipt(receipt besudmessages.ReplyWithHeaders) {
+func (p *mockReplyProcessor) ReplyWithReceipt(receipt turbokeeperdmessages.ReplyWithHeaders) {
 	p.receipt = receipt
 }
 
-func (p *mockReplyProcessor) ReplyWithReceiptAndError(receipt besudmessages.ReplyWithHeaders, err error) {
+func (p *mockReplyProcessor) ReplyWithReceiptAndError(receipt turbokeeperdmessages.ReplyWithHeaders, err error) {
 	p.receipt = receipt
 }
 
@@ -81,10 +81,10 @@ func TestDispatchSendTransactionSync(t *testing.T) {
 
 	processor := &mockProcessor{
 		t:     t,
-		reply: &besudmessages.TransactionReceipt{},
+		reply: &turbokeeperdmessages.TransactionReceipt{},
 	}
 	d := newSyncDispatcher(processor)
-	sendTx := &besudmessages.SendTransaction{}
+	sendTx := &turbokeeperdmessages.SendTransaction{}
 	sendTx.Headers.ID = "request1"
 	r := &mockReplyProcessor{}
 	d.DispatchSendTransactionSync(context.Background(), sendTx, r)
@@ -98,10 +98,10 @@ func TestDispatchDeployContractSync(t *testing.T) {
 
 	processor := &mockProcessor{
 		t:     t,
-		reply: &besudmessages.TransactionReceipt{},
+		reply: &turbokeeperdmessages.TransactionReceipt{},
 	}
 	d := newSyncDispatcher(processor)
-	deployTx := &besudmessages.DeployContract{}
+	deployTx := &turbokeeperdmessages.DeployContract{}
 	deployTx.Headers.ID = "request1"
 	r := &mockReplyProcessor{}
 	d.DispatchDeployContractSync(context.Background(), deployTx, r)
@@ -115,11 +115,11 @@ func TestDispatchSendTransactionBadUnmarshal(t *testing.T) {
 
 	processor := &mockProcessor{
 		t:            t,
-		reply:        &besudmessages.TransactionReceipt{},
+		reply:        &turbokeeperdmessages.TransactionReceipt{},
 		badUnmarshal: true,
 	}
 	d := newSyncDispatcher(processor)
-	sendTx := &besudmessages.SendTransaction{}
+	sendTx := &turbokeeperdmessages.SendTransaction{}
 	sendTx.Headers.ID = "request1"
 	r := &mockReplyProcessor{}
 	d.DispatchSendTransactionSync(context.Background(), sendTx, r)
@@ -132,11 +132,11 @@ func TestDispatchSendTransactionError(t *testing.T) {
 
 	processor := &mockProcessor{
 		t:     t,
-		reply: &besudmessages.TransactionReceipt{},
+		reply: &turbokeeperdmessages.TransactionReceipt{},
 		err:   fmt.Errorf("pop"),
 	}
 	d := newSyncDispatcher(processor)
-	sendTx := &besudmessages.SendTransaction{}
+	sendTx := &turbokeeperdmessages.SendTransaction{}
 	sendTx.Headers.ID = "request1"
 	r := &mockReplyProcessor{}
 	d.DispatchSendTransactionSync(context.Background(), sendTx, r)

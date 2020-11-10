@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudtx
+package turbokeeperdtx
 
 import (
 	"encoding/json"
@@ -25,10 +25,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/spf13/cobra"
 
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
-	"github.com/freight-trust/zeroxyz/internal/besudeth"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
-	"github.com/freight-trust/zeroxyz/internal/besudutils"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -40,7 +40,7 @@ const (
 // for tracking all in-flight messages
 type TxnProcessor interface {
 	OnMessage(TxnContext)
-	Init(besudeth.RPCClient)
+	Init(turbokeeperdeth.RPCClient)
 	ResolveAddress(from string) (resolvedFrom string, err error)
 }
 
@@ -54,11 +54,11 @@ type inflightTxn struct {
 	privacyGroupID   string
 	initialWaitDelay time.Duration
 	txnContext       TxnContext
-	tx               *besudeth.Txn
+	tx               *turbokeeperdeth.Txn
 	wg               sync.WaitGroup
 	registerAs       string // passed from request to reply
-	rpc              besudeth.RPCClient
-	signer           besudeth.TXSigner
+	rpc              turbokeeperdeth.RPCClient
+	signer           turbokeeperdeth.TXSigner
 	gapFillSucceeded bool
 	gapFillTxHash    string
 }
@@ -97,16 +97,16 @@ type txnProcessor struct {
 	inflightTxnsLock   *sync.Mutex
 	inflightTxns       map[string]*inflightTxnState
 	inflightTxnDelayer TxnDelayTracker
-	rpc                besudeth.RPCClient
+	rpc                turbokeeperdeth.RPCClient
 	addressBook        AddressBook
 	hdwallet           HDWallet
 	conf               *TxnProcessorConf
-	rpcConf            *besudeth.RPCConf
+	rpcConf            *turbokeeperdeth.RPCConf
 	concurrencySlots   chan bool
 }
 
 // NewTxnProcessor constructor for message procss
-func NewTxnProcessor(conf *TxnProcessorConf, rpcConf *besudeth.RPCConf) TxnProcessor {
+func NewTxnProcessor(conf *TxnProcessorConf, rpcConf *turbokeeperdeth.RPCConf) TxnProcessor {
 	if conf.SendConcurrency == 0 {
 		conf.SendConcurrency = defaultSendConcurrency
 	}
@@ -121,7 +121,7 @@ func NewTxnProcessor(conf *TxnProcessorConf, rpcConf *besudeth.RPCConf) TxnProce
 	return p
 }
 
-func (p *txnProcessor) Init(rpc besudeth.RPCClient) {
+func (p *txnProcessor) Init(rpc turbokeeperdeth.RPCClient) {
 	p.rpc = rpc
 	p.maxTXWaitTime = time.Duration(p.conf.MaxTXWaitTime) * time.Second
 	if p.conf.AddressBookConf.AddressbookURLPrefix != "" {
@@ -134,7 +134,7 @@ func (p *txnProcessor) Init(rpc besudeth.RPCClient) {
 
 // CobraInitTxnProcessor sets the standard command-line parameters for the txnprocessor
 func CobraInitTxnProcessor(cmd *cobra.Command, txconf *TxnProcessorConf) {
-	cmd.Flags().IntVarP(&txconf.MaxTXWaitTime, "tx-timeout", "x", besudutils.DefInt("ETH_TX_TIMEOUT", 0), "Maximum wait time for an individual transaction (seconds)")
+	cmd.Flags().IntVarP(&txconf.MaxTXWaitTime, "tx-timeout", "x", turbokeeperdutils.DefInt("ETH_TX_TIMEOUT", 0), "Maximum wait time for an individual transaction (seconds)")
 	cmd.Flags().BoolVarP(&txconf.HexValuesInReceipt, "hex-values", "H", false, "Include hex values for large numbers in receipts (as well as numeric strings)")
 	cmd.Flags().BoolVarP(&txconf.AlwaysManageNonce, "predict-nonces", "P", false, "Predict the next nonce before sending (default=false for node-signed txns)")
 	cmd.Flags().BoolVarP(&txconf.OrionPrivateAPIS, "orion-privapi", "G", false, "Use Orion JSON/RPC API semantics for private transactions")
@@ -151,22 +151,22 @@ func (p *txnProcessor) OnMessage(txnContext TxnContext) {
 	headers := txnContext.Headers()
 	log.Debugf("Processing %+v", headers)
 	switch headers.MsgType {
-	case besudmessages.MsgTypeDeployContract:
-		var deployContractMsg besudmessages.DeployContract
+	case turbokeeperdmessages.MsgTypeDeployContract:
+		var deployContractMsg turbokeeperdmessages.DeployContract
 		if unmarshalErr = txnContext.Unmarshal(&deployContractMsg); unmarshalErr != nil {
 			break
 		}
 		p.OnDeployContractMessage(txnContext, &deployContractMsg)
 		break
-	case besudmessages.MsgTypeSendTransaction:
-		var sendTransactionMsg besudmessages.SendTransaction
+	case turbokeeperdmessages.MsgTypeSendTransaction:
+		var sendTransactionMsg turbokeeperdmessages.SendTransaction
 		if unmarshalErr = txnContext.Unmarshal(&sendTransactionMsg); unmarshalErr != nil {
 			break
 		}
 		p.OnSendTransactionMessage(txnContext, &sendTransactionMsg)
 		break
 	default:
-		unmarshalErr = besuderrors.Errorf(besuderrors.TransactionSendMsgTypeUnknown, headers.MsgType)
+		unmarshalErr = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendMsgTypeUnknown, headers.MsgType)
 	}
 	// We must always send a reply
 	if unmarshalErr != nil {
@@ -185,10 +185,10 @@ func (p *txnProcessor) ResolveAddress(from string) (resolvedFrom string, err err
 	return
 }
 
-func (p *txnProcessor) resolveSigner(from string) (signer besudeth.TXSigner, err error) {
+func (p *txnProcessor) resolveSigner(from string) (signer turbokeeperdeth.TXSigner, err error) {
 	if hdWalletRequest := IsHDWalletRequest(from); hdWalletRequest != nil {
 		if p.hdwallet == nil {
-			err = besuderrors.Errorf(besuderrors.HDWalletSigningNoConfig)
+			err = turbokeeperderrors.Errorf(turbokeeperderrors.HDWalletSigningNoConfig)
 			return
 		}
 		if signer, err = p.hdwallet.SignerFor(hdWalletRequest); err != nil {
@@ -203,7 +203,7 @@ func (p *txnProcessor) resolveSigner(from string) (signer besudeth.TXSigner, err
 // nonce for the transaction.
 // Builds a new wrapper containing this information, that can be added to
 // the inflight list if the transaction is submitted
-func (p *txnProcessor) addInflightWrapper(txnContext TxnContext, msg *besudmessages.TransactionCommon) (inflight *inflightTxn, err error) {
+func (p *txnProcessor) addInflightWrapper(txnContext TxnContext, msg *turbokeeperdmessages.TransactionCommon) (inflight *inflightTxn, err error) {
 
 	inflight = &inflightTxn{
 		txnContext: txnContext,
@@ -222,7 +222,7 @@ func (p *txnProcessor) addInflightWrapper(txnContext TxnContext, msg *besudmessa
 	}
 
 	// Validate the from address, and normalize to lower case with 0x prefix
-	from, err := besudutils.StrToAddress("from", msg.From)
+	from, err := turbokeeperdutils.StrToAddress("from", msg.From)
 	if err != nil {
 		return
 	}
@@ -231,12 +231,12 @@ func (p *txnProcessor) addInflightWrapper(txnContext TxnContext, msg *besudmessa
 	// Need to resolve privateFrom/privateFor to a privacyGroupID for Orion
 	if p.conf.OrionPrivateAPIS {
 		if msg.PrivacyGroupID != "" && len(msg.PrivateFor) > 0 {
-			err = besuderrors.Errorf(besuderrors.TransactionSendPrivateForAndPrivacyGroup)
+			err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendPrivateForAndPrivacyGroup)
 			return
 		} else if msg.PrivacyGroupID != "" {
 			inflight.privacyGroupID = msg.PrivacyGroupID
 		} else if len(msg.PrivateFor) > 0 {
-			if inflight.privacyGroupID, err = besudeth.GetOrionPrivacyGroup(txnContext.Context(), p.rpc, &from, msg.PrivateFrom, msg.PrivateFor); err != nil {
+			if inflight.privacyGroupID, err = turbokeeperdeth.GetOrionPrivacyGroup(txnContext.Context(), p.rpc, &from, msg.PrivateFrom, msg.PrivateFor); err != nil {
 				return
 			}
 		}
@@ -277,7 +277,7 @@ func (p *txnProcessor) addInflightWrapper(txnContext TxnContext, msg *besudmessa
 	fromNode := false
 	if suppliedNonce != "" {
 		if inflight.nonce, err = suppliedNonce.Int64(); err != nil {
-			err = besuderrors.Errorf(besuderrors.TransactionSendBadNonce, err)
+			err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendBadNonce, err)
 			return
 		}
 	} else if p.conf.OrionPrivateAPIS && (len(msg.PrivateFor) > 0 || msg.PrivacyGroupID != "") {
@@ -285,7 +285,7 @@ func (p *txnProcessor) addInflightWrapper(txnContext TxnContext, msg *besudmessa
 		// group ID and nonce (the public transaction will be submitted by the pantheon node)
 		// Note: We do not have highestNonce calculation for in-flight private transactions,
 		//       so attempting to submit more than one per block currently will FAIL
-		if inflight.nonce, err = besudeth.GetOrionTXCount(txnContext.Context(), p.rpc, &from, inflight.privacyGroupID); err != nil {
+		if inflight.nonce, err = turbokeeperdeth.GetOrionTXCount(txnContext.Context(), p.rpc, &from, inflight.privacyGroupID); err != nil {
 			p.inflightTxnsLock.Unlock()
 			return
 		}
@@ -304,7 +304,7 @@ func (p *txnProcessor) addInflightWrapper(txnContext TxnContext, msg *besudmessa
 		// we need to accept the possibility of 'replacement transaction underpriced'
 		// (or if gas price is being varied by the submitter the potential of
 		// overwriting a transaction)
-		if inflight.nonce, err = besudeth.GetTransactionCount(txnContext.Context(), p.rpc, &from, "pending"); err != nil {
+		if inflight.nonce, err = turbokeeperdeth.GetTransactionCount(txnContext.Context(), p.rpc, &from, "pending"); err != nil {
 			inflightForAddr.highestNonce = inflight.nonce // store the nonce in our inflight txns state
 			p.inflightTxnsLock.Unlock()
 			return
@@ -367,7 +367,7 @@ func (p *txnProcessor) cancelInFlight(inflight *inflightTxn, gapPotential bool) 
 // to complete. Only
 func (p *txnProcessor) submitGapFillTX(inflight *inflightTxn) {
 	if p.conf.AttemptGapFill {
-		tx, err := besudeth.NewNilTX(inflight.from, inflight.nonce, inflight.signer)
+		tx, err := turbokeeperdeth.NewNilTX(inflight.from, inflight.nonce, inflight.signer)
 		if err == nil {
 			inflight.gapFillTxHash = tx.EthTX.Hash().String()
 			err = tx.Send(inflight.txnContext.Context(), inflight.rpc)
@@ -389,7 +389,7 @@ func (p *txnProcessor) waitForCompletion(inflight *inflightTxn, initialWaitDelay
 	// The initial delay is passed in, based on updates from all the other
 	// go routines that are tracking transactions. The idea is to minimize
 	// both latency beyond the block period, and avoiding spamming the node
-	// with REST calls for long block periods, or when there is a bacbesuog
+	// with REST calls for long block periods, or when there is a bacturbokeeperog
 	replyWaitStart := time.Now().UTC()
 	time.Sleep(initialWaitDelay)
 
@@ -422,9 +422,9 @@ func (p *txnProcessor) waitForCompletion(inflight *inflightTxn, initialWaitDelay
 
 	if timedOut {
 		if err != nil {
-			inflight.txnContext.SendErrorReplyWithTX(500, besuderrors.Errorf(besuderrors.TransactionSendReceiptCheckError, retries, err), inflight.tx.Hash)
+			inflight.txnContext.SendErrorReplyWithTX(500, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendReceiptCheckError, retries, err), inflight.tx.Hash)
 		} else {
-			inflight.txnContext.SendErrorReplyWithTX(408, besuderrors.Errorf(besuderrors.TransactionSendReceiptCheckTimeout), inflight.tx.Hash)
+			inflight.txnContext.SendErrorReplyWithTX(408, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendReceiptCheckTimeout), inflight.tx.Hash)
 		}
 	} else {
 		// Update the stats
@@ -437,11 +437,11 @@ func (p *txnProcessor) waitForCompletion(inflight *inflightTxn, initialWaitDelay
 		log.Infof("Receipt for %s obtained after %.2fs Success=%t", inflight.tx.Hash, elapsed.Seconds(), isSuccess)
 
 		// Build our reply
-		var reply besudmessages.TransactionReceipt
+		var reply turbokeeperdmessages.TransactionReceipt
 		if isSuccess {
-			reply.Headers.MsgType = besudmessages.MsgTypeTransactionSuccess
+			reply.Headers.MsgType = turbokeeperdmessages.MsgTypeTransactionSuccess
 		} else {
-			reply.Headers.MsgType = besudmessages.MsgTypeTransactionFailure
+			reply.Headers.MsgType = turbokeeperdmessages.MsgTypeTransactionFailure
 		}
 		reply.BlockHash = receipt.BlockHash
 		if p.conf.HexValuesInReceipt {
@@ -496,7 +496,7 @@ func (p *txnProcessor) waitForCompletion(inflight *inflightTxn, initialWaitDelay
 
 // addInflight adds a transction to the inflight list, and kick off
 // a goroutine to check for its completion and send the result
-func (p *txnProcessor) trackMining(inflight *inflightTxn, tx *besudeth.Txn) {
+func (p *txnProcessor) trackMining(inflight *inflightTxn, tx *turbokeeperdeth.Txn) {
 
 	// Kick off the goroutine to track it to completion
 	inflight.tx = tx
@@ -505,7 +505,7 @@ func (p *txnProcessor) trackMining(inflight *inflightTxn, tx *besudeth.Txn) {
 
 }
 
-func (p *txnProcessor) OnDeployContractMessage(txnContext TxnContext, msg *besudmessages.DeployContract) {
+func (p *txnProcessor) OnDeployContractMessage(txnContext TxnContext, msg *turbokeeperdmessages.DeployContract) {
 
 	inflight, err := p.addInflightWrapper(txnContext, &msg.TransactionCommon)
 	if err != nil {
@@ -515,7 +515,7 @@ func (p *txnProcessor) OnDeployContractMessage(txnContext TxnContext, msg *besud
 	inflight.registerAs = msg.RegisterAs
 	msg.Nonce = inflight.nonceNumber()
 
-	tx, err := besudeth.NewContractDeployTxn(msg, inflight.signer)
+	tx, err := turbokeeperdeth.NewContractDeployTxn(msg, inflight.signer)
 	if err != nil {
 		p.cancelInFlight(inflight, false) // No gap potential, we haven't submitted
 		txnContext.SendErrorReply(400, err)
@@ -525,7 +525,7 @@ func (p *txnProcessor) OnDeployContractMessage(txnContext TxnContext, msg *besud
 	p.sendTransactionCommon(txnContext, inflight, tx)
 }
 
-func (p *txnProcessor) OnSendTransactionMessage(txnContext TxnContext, msg *besudmessages.SendTransaction) {
+func (p *txnProcessor) OnSendTransactionMessage(txnContext TxnContext, msg *turbokeeperdmessages.SendTransaction) {
 
 	inflight, err := p.addInflightWrapper(txnContext, &msg.TransactionCommon)
 	if err != nil {
@@ -534,7 +534,7 @@ func (p *txnProcessor) OnSendTransactionMessage(txnContext TxnContext, msg *besu
 	}
 	msg.Nonce = inflight.nonceNumber()
 
-	tx, err := besudeth.NewSendTxn(msg, inflight.signer)
+	tx, err := turbokeeperdeth.NewSendTxn(msg, inflight.signer)
 	if err != nil {
 		p.cancelInFlight(inflight, false) // No gap potential, we haven't submitted
 		txnContext.SendErrorReply(400, err)
@@ -544,7 +544,7 @@ func (p *txnProcessor) OnSendTransactionMessage(txnContext TxnContext, msg *besu
 	p.sendTransactionCommon(txnContext, inflight, tx)
 }
 
-func (p *txnProcessor) sendTransactionCommon(txnContext TxnContext, inflight *inflightTxn, tx *besudeth.Txn) {
+func (p *txnProcessor) sendTransactionCommon(txnContext TxnContext, inflight *inflightTxn, tx *turbokeeperdeth.Txn) {
 	tx.OrionPrivateAPIS = p.conf.OrionPrivateAPIS
 	tx.PrivacyGroupID = inflight.privacyGroupID
 	tx.NodeAssignNonce = inflight.nodeAssignNonce
@@ -560,7 +560,7 @@ func (p *txnProcessor) sendTransactionCommon(txnContext TxnContext, inflight *in
 	}
 }
 
-func (p *txnProcessor) sendAndTrackMining(txnContext TxnContext, inflight *inflightTxn, tx *besudeth.Txn) {
+func (p *txnProcessor) sendAndTrackMining(txnContext TxnContext, inflight *inflightTxn, tx *turbokeeperdeth.Txn) {
 	err := tx.Send(txnContext.Context(), inflight.rpc)
 	if p.conf.SendConcurrency > 1 {
 		<-p.concurrencySlots // return our slot as soon as send is complete, to let an awaiting send go

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudrest
+package turbokeeperdrest
 
 import (
 	"bytes"
@@ -25,9 +25,9 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/besudeth"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
-	"github.com/freight-trust/zeroxyz/internal/besudtx"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdtx"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -37,10 +37,10 @@ type mockProcessor struct {
 }
 
 func (p *mockProcessor) ResolveAddress(from string) (string, error) { return "", nil }
-func (p *mockProcessor) OnMessage(ctx besudtx.TxnContext) {
+func (p *mockProcessor) OnMessage(ctx turbokeeperdtx.TxnContext) {
 	p.capturedCtx = ctx.(*msgContext)
 }
-func (p *mockProcessor) Init(besudeth.RPCClient) {}
+func (p *mockProcessor) Init(turbokeeperdeth.RPCClient) {}
 
 func newTestWebhooksDirect(maxMsgs int) (*webhooksDirect, *memoryReceipts, *mockProcessor) {
 	rsc := &ReceiptStoreConf{}
@@ -64,13 +64,13 @@ func newTestWebhooksDirectServer(maxMsgs int) (*webhooksDirect, *httptest.Server
 	return wd, ts, r, p
 }
 
-func newTestMsg() besudmessages.SendTransaction {
-	return besudmessages.SendTransaction{
-		TransactionCommon: besudmessages.TransactionCommon{
-			RequestCommon: besudmessages.RequestCommon{
-				Headers: besudmessages.RequestHeaders{
-					CommonHeaders: besudmessages.CommonHeaders{
-						MsgType: besudmessages.MsgTypeSendTransaction,
+func newTestMsg() turbokeeperdmessages.SendTransaction {
+	return turbokeeperdmessages.SendTransaction{
+		TransactionCommon: turbokeeperdmessages.TransactionCommon{
+			RequestCommon: turbokeeperdmessages.RequestCommon{
+				Headers: turbokeeperdmessages.RequestHeaders{
+					CommonHeaders: turbokeeperdmessages.CommonHeaders{
+						MsgType: turbokeeperdmessages.MsgTypeSendTransaction,
 					},
 				},
 			},
@@ -99,7 +99,7 @@ func TestWebhooksDirectSubmitSendTransaction(t *testing.T) {
 	assert.Equal(200, resp.StatusCode)
 	replyBytes, _ := ioutil.ReadAll(resp.Body)
 	t.Logf("Received reply: %s", string(replyBytes))
-	reply := besudmessages.AsyncSentMsg{}
+	reply := turbokeeperdmessages.AsyncSentMsg{}
 	json.Unmarshal(replyBytes, &reply)
 	assert.True(reply.Sent)
 	assert.NotEmpty(reply.Request)
@@ -108,7 +108,7 @@ func TestWebhooksDirectSubmitSendTransaction(t *testing.T) {
 	headers := p.capturedCtx.Headers()
 	assert.Equal(reply.Request, headers.ID)
 
-	reconstructed := &besudmessages.SendTransaction{}
+	reconstructed := &turbokeeperdmessages.SendTransaction{}
 	err = p.capturedCtx.Unmarshal(&reconstructed)
 	assert.NoError(err)
 	assert.Equal("0xd912641Eb51a311A1C6BD32c1ED200C2a5abD7FE", reconstructed.From)
@@ -129,7 +129,7 @@ func TestWebhooksDirectMsgLimit(t *testing.T) {
 	assert.Equal(200, resp.StatusCode)
 	replyBytes, _ := ioutil.ReadAll(resp.Body)
 	t.Logf("Received reply: %s", string(replyBytes))
-	reply1 := besudmessages.AsyncSentMsg{}
+	reply1 := turbokeeperdmessages.AsyncSentMsg{}
 	json.Unmarshal(replyBytes, &reply1)
 	msgID1 := reply1.Request
 

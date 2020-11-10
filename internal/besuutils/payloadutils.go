@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudutils
+package turbokeeperdutils
 
 import (
 	"encoding/json"
@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/icza/dyno"
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
 	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -35,11 +35,11 @@ const (
 func YAMLorJSONPayload(req *http.Request) (map[string]interface{}, error) {
 
 	if req.ContentLength > MaxPayloadSize {
-		return nil, besuderrors.Errorf(besuderrors.HelperYAMLorJSONPayloadTooLarge)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.HelperYAMLorJSONPayloadTooLarge)
 	}
 	originalPayload, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		return nil, besuderrors.Errorf(besuderrors.HelperYAMLorJSONPayloadReadFailed, err)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.HelperYAMLorJSONPayloadReadFailed, err)
 	}
 
 	// We support both YAML and JSON input.
@@ -68,7 +68,7 @@ func YAMLorJSONPayload(req *http.Request) (map[string]interface{}, error) {
 		yamlGenericPayload := make(map[interface{}]interface{})
 		err := yaml.Unmarshal(originalPayload, &yamlGenericPayload)
 		if err != nil {
-			return nil, besuderrors.Errorf(besuderrors.HelperYAMLorJSONPayloadParseFailed, err)
+			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.HelperYAMLorJSONPayloadParseFailed, err)
 		}
 		msg = dyno.ConvertMapI2MapS(yamlGenericPayload).(map[string]interface{})
 	}

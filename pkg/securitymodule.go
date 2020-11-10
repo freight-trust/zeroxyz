@@ -1,5 +1,5 @@
 
-package besuplugins
+package turbokeeperplugins
 
 // EventOperation enumerates operation types on events
 type EventOperation int

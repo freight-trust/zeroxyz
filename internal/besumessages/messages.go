@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudmessages
+package turbokeeperdmessages
 
 import (
 	"encoding/json"
@@ -21,7 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/freight-trust/zeroxyz/internal/besudbind"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
 )
 
 const (
@@ -36,7 +36,7 @@ const (
 	// MsgTypeTransactionFailure - a transaction receipt where status is 0
 	MsgTypeTransactionFailure = "TransactionFailure"
 	// RecordHeaderAccessToken - record header name for passing JWT token over messaging
-	RecordHeaderAccessToken = "besud-accesstoken"
+	RecordHeaderAccessToken = "turbokeeperd-accesstoken"
 )
 
 // AsyncSentMsg is a standard response for async requests
@@ -120,7 +120,7 @@ type TransactionCommon struct {
 type SendTransaction struct {
 	TransactionCommon
 	To         string                        `json:"to"`
-	Method     *besudbind.ABIElementMarshaling `json:"method,omitempty"`
+	Method     *turbokeeperdbind.ABIElementMarshaling `json:"method,omitempty"`
 	MethodName string                        `json:"methodName,omitempty"`
 }
 
@@ -130,7 +130,7 @@ type DeployContract struct {
 	Solidity        string                `json:"solidity,omitempty"`
 	CompilerVersion string                `json:"compilerVersion,omitempty"`
 	EVMVersion      string                `json:"evmVersion,omitempty"`
-	ABI             besudbind.ABIMarshaling `json:"abi,omitempty"`
+	ABI             turbokeeperdbind.ABIMarshaling `json:"abi,omitempty"`
 	DevDoc          string                `json:"devDocs,omitempty"`
 	Compiled        []byte                `json:"compiled,omitempty"`
 	ContractName    string                `json:"contractName,omitempty"`

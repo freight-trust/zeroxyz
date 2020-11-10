@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudcontracts
+package turbokeeperdcontracts
 
 import (
 	"encoding/json"
@@ -24,9 +24,9 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/besudbind"
-	"github.com/freight-trust/zeroxyz/internal/besudkvstore"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdkvstore"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,7 +39,7 @@ type mockRR struct {
 	err            error
 }
 
-func (rr *mockRR) loadFactoryForGateway(id string, refresh bool) (*besudmessages.DeployContract, error) {
+func (rr *mockRR) loadFactoryForGateway(id string, refresh bool) (*turbokeeperdmessages.DeployContract, error) {
 	rr.idCapture = id
 	rr.refreshCapture = refresh
 	if rr.deployMsg == nil {
@@ -165,7 +165,7 @@ func TestRemoteRegistryloadFactoryForGatewaySuccess(t *testing.T) {
 	res, err := rr.loadFactoryForGateway("testid", false)
 	assert.NoError(err)
 	assert.NotEmpty(res.Compiled)
-	runtimeABI, err := besudbind.ABIMarshalingToABIRuntime(res.ABI)
+	runtimeABI, err := turbokeeperdbind.ABIMarshalingToABIRuntime(res.ABI)
 	assert.NoError(err)
 	assert.Equal("set", runtimeABI.Methods["set"].Name)
 	assert.Contains(res.DevDoc, "set")
@@ -644,7 +644,7 @@ func TestRemoteRegistryLoadFactoryFromCacheDBBadBytes(t *testing.T) {
 func TestRemoteRegistryStoreFactoryToCacheDBBadObj(t *testing.T) {
 	r := NewRemoteRegistry(&RemoteRegistryConf{})
 	rr := r.(*remoteRegistry)
-	mockKV := besudkvstore.NewMockKV(nil)
+	mockKV := turbokeeperdkvstore.NewMockKV(nil)
 	rr.db = mockKV
 	mockKV.StoreErr = fmt.Errorf("pop")
 	rr.storeFactoryToCacheDB("testid", nil)

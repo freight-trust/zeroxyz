@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudevents
+package turbokeeperdevents
 
 import (
 	"encoding/json"
 	"testing"
 
-	"github.com/freight-trust/zeroxyz/internal/besudbind"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -60,28 +60,28 @@ const sampleEventABIAllIndexedNoData = `
 func TestTopicToValue(t *testing.T) {
 	assert := assert.New(t)
 
-	h := besudbind.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcfc7")
-	v := topicToValue(&h, &besudbind.ABIArgument{Type: besudbind.ABITypeKnown("int64")})
+	h := turbokeeperdbind.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcfc7")
+	v := topicToValue(&h, &turbokeeperdbind.ABIArgument{Type: turbokeeperdbind.ABITypeKnown("int64")})
 	assert.Equal("-12345", v)
 
-	h = besudbind.HexToHash("0x000000000000000000000000000000000000000001d2d490d572353317a01f8d")
-	v = topicToValue(&h, &besudbind.ABIArgument{Type: besudbind.ABITypeKnown("uint256")})
+	h = turbokeeperdbind.HexToHash("0x000000000000000000000000000000000000000001d2d490d572353317a01f8d")
+	v = topicToValue(&h, &turbokeeperdbind.ABIArgument{Type: turbokeeperdbind.ABITypeKnown("uint256")})
 	assert.Equal("564363245346346345353453453", v)
 
-	h = besudbind.HexToHash("0x0000000000000000000000003924d1d6423f88148a4fcc0417a33b27a61d595f")
-	v = topicToValue(&h, &besudbind.ABIArgument{Type: besudbind.ABITypeKnown("address")})
-	assert.Equal(besudbind.HexToAddress("0x3924d1D6423F88148A4fcc0417A33B27a61d595f"), v)
+	h = turbokeeperdbind.HexToHash("0x0000000000000000000000003924d1d6423f88148a4fcc0417a33b27a61d595f")
+	v = topicToValue(&h, &turbokeeperdbind.ABIArgument{Type: turbokeeperdbind.ABITypeKnown("address")})
+	assert.Equal(turbokeeperdbind.HexToAddress("0x3924d1D6423F88148A4fcc0417A33B27a61d595f"), v)
 
-	h = besudbind.HexToHash("0xdc47fb175244491f21a29733a67d2e07647d59d2f36f2603d339299587182f19")
-	v = topicToValue(&h, &besudbind.ABIArgument{Type: besudbind.ABITypeKnown("string")})
+	h = turbokeeperdbind.HexToHash("0xdc47fb175244491f21a29733a67d2e07647d59d2f36f2603d339299587182f19")
+	v = topicToValue(&h, &turbokeeperdbind.ABIArgument{Type: turbokeeperdbind.ABITypeKnown("string")})
 	assert.Equal("0xdc47fb175244491f21a29733a67d2e07647d59d2f36f2603d339299587182f19", v)
 
-	h = besudbind.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000")
-	v = topicToValue(&h, &besudbind.ABIArgument{Type: besudbind.ABITypeKnown("bool")})
+	h = turbokeeperdbind.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000")
+	v = topicToValue(&h, &turbokeeperdbind.ABIArgument{Type: turbokeeperdbind.ABITypeKnown("bool")})
 	assert.Equal(false, v)
 
-	h = besudbind.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000001")
-	v = topicToValue(&h, &besudbind.ABIArgument{Type: besudbind.ABITypeKnown("bool")})
+	h = turbokeeperdbind.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000001")
+	v = topicToValue(&h, &turbokeeperdbind.ABIArgument{Type: turbokeeperdbind.ABITypeKnown("bool")})
 	assert.Equal(true, v)
 
 }
@@ -104,9 +104,9 @@ func TestProcessLogEntryNillAndTooFewFields(t *testing.T) {
       {"name": "two", "type": "uint256", "indexed": true}
     ]
   }`
-	var marshaling besudbind.ABIElementMarshaling
+	var marshaling turbokeeperdbind.ABIElementMarshaling
 	json.Unmarshal([]byte(eventABI), &marshaling)
-	event, err := besudbind.ABIElementMarshalingToABIEvent(&marshaling)
+	event, err := turbokeeperdbind.ABIElementMarshalingToABIEvent(&marshaling)
 	assert.NoError(err)
 
 	lp := &logProcessor{
@@ -114,7 +114,7 @@ func TestProcessLogEntryNillAndTooFewFields(t *testing.T) {
 		stream: stream,
 	}
 	err = lp.processLogEntry("ut", &logEntry{
-		Topics: []*besudbind.Hash{nil},
+		Topics: []*turbokeeperdbind.Hash{nil},
 	}, 2)
 
 	assert.EqualError(err, "ut: Ran out of topics for indexed fields at field 1 of testEvent(uint256,uint256)")
@@ -137,10 +137,10 @@ func TestProcessLogBadRLPData(t *testing.T) {
       {"name": "two", "type": "uint256"}
     ]
   }`
-	var marshaling besudbind.ABIElementMarshaling
+	var marshaling turbokeeperdbind.ABIElementMarshaling
 	err := json.Unmarshal([]byte(eventABI), &marshaling)
 	assert.NoError(err)
-	event, _ := besudbind.ABIElementMarshalingToABIEvent(&marshaling)
+	event, _ := turbokeeperdbind.ABIElementMarshalingToABIEvent(&marshaling)
 	lp := &logProcessor{
 		event:  event,
 		stream: stream,
@@ -164,9 +164,9 @@ func TestProcessLogSampleEvent(t *testing.T) {
 		spec:        spec,
 		eventStream: make(chan *eventData, 1),
 	}
-	var marshaling besudbind.ABIElementMarshaling
+	var marshaling turbokeeperdbind.ABIElementMarshaling
 	json.Unmarshal([]byte(sampleEventABIAllIndexedNoData), &marshaling)
-	event, _ := besudbind.ABIElementMarshalingToABIEvent(&marshaling)
+	event, _ := turbokeeperdbind.ABIElementMarshalingToABIEvent(&marshaling)
 	lp := &logProcessor{
 		event:  event,
 		stream: stream,

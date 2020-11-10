@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudcontracts
+package turbokeeperdcontracts
 
 import (
 	"archive/zip"
@@ -29,17 +29,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/freight-trust/zeroxyz/internal/besudbind"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
 
-	"github.com/freight-trust/zeroxyz/internal/besudauth"
-	"github.com/freight-trust/zeroxyz/internal/besudauth/besudauthtest"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth/turbokeeperdauthtest"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-openapi/spec"
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/besudevents"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
-	"github.com/freight-trust/zeroxyz/internal/besudtx"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdevents"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdtx"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -69,7 +69,7 @@ func TestNewSmartContractGatewayBadURL(t *testing.T) {
 		&SmartContractGatewayConf{
 			BaseURL: " :",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -83,11 +83,11 @@ func TestNewSmartContractGatewayWithEvents(t *testing.T) {
 	s, err := NewSmartContractGateway(
 		&SmartContractGatewayConf{
 			BaseURL: "http://localhost/api/v1",
-			SubscriptionManagerConf: besudevents.SubscriptionManagerConf{
+			SubscriptionManagerConf: turbokeeperdevents.SubscriptionManagerConf{
 				EventLevelDBPath: path.Join(dir, "db"),
 			},
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -105,11 +105,11 @@ func TestNewSmartContractGatewayWithEventsFail(t *testing.T) {
 	_, err := NewSmartContractGateway(
 		&SmartContractGatewayConf{
 			BaseURL: "http://localhost/api/v1",
-			SubscriptionManagerConf: besudevents.SubscriptionManagerConf{
+			SubscriptionManagerConf: turbokeeperdevents.SubscriptionManagerConf{
 				EventLevelDBPath: dbpath,
 			},
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -120,7 +120,7 @@ func TestNewSmartContractGatewayWithEventsFail(t *testing.T) {
 func TestPreDeployCompileAndPostDeploy(t *testing.T) {
 	// writes real files and tests end to end
 	assert := assert.New(t)
-	msg := besudmessages.DeployContract{
+	msg := turbokeeperdmessages.DeployContract{
 		Solidity:   simpleEventsSource(),
 		RegisterAs: "Test 1",
 	}
@@ -133,7 +133,7 @@ func TestPreDeployCompileAndPostDeploy(t *testing.T) {
 			StoragePath: dir,
 			BaseURL:     "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -150,18 +150,18 @@ func TestPreDeployCompileAndPostDeploy(t *testing.T) {
 
 	deployStashBytes, err := ioutil.ReadFile(path.Join(dir, "abi_message1.deploy.json"))
 	assert.NoError(err)
-	var deployStash besudmessages.DeployContract
+	var deployStash turbokeeperdmessages.DeployContract
 	err = json.Unmarshal(deployStashBytes, &deployStash)
 	assert.NoError(err)
 	assert.NotEmpty(deployStash.CompilerVersion)
 
 	contractAddr := common.HexToAddress("0x0123456789AbcdeF0123456789abCdef01234567")
-	receipt := besudmessages.TransactionReceipt{
-		ReplyCommon: besudmessages.ReplyCommon{
-			Headers: besudmessages.ReplyHeaders{
-				CommonHeaders: besudmessages.CommonHeaders{
+	receipt := turbokeeperdmessages.TransactionReceipt{
+		ReplyCommon: turbokeeperdmessages.ReplyCommon{
+			Headers: turbokeeperdmessages.ReplyHeaders{
+				CommonHeaders: turbokeeperdmessages.CommonHeaders{
 					ID:      "message2",
-					MsgType: besudmessages.MsgTypeTransactionSuccess,
+					MsgType: turbokeeperdmessages.MsgTypeTransactionSuccess,
 				},
 				ReqID: "message1",
 			},
@@ -175,7 +175,7 @@ func TestPreDeployCompileAndPostDeploy(t *testing.T) {
 	deployMsg, abiID, err := scgw.(*smartContractGW).loadDeployMsgForInstance("0123456789abcdef0123456789abcdef01234567")
 	assert.NoError(err)
 	assert.NotEmpty(abiID)
-	runtimeABI, err := besudbind.ABIMarshalingToABIRuntime(deployMsg.ABI)
+	runtimeABI, err := turbokeeperdbind.ABIMarshalingToABIRuntime(deployMsg.ABI)
 	assert.NoError(err)
 	assert.Equal("set", runtimeABI.Methods["set"].Name)
 
@@ -219,7 +219,7 @@ func TestPreDeployCompileAndPostDeploy(t *testing.T) {
 	res = httptest.NewRecorder()
 	router.ServeHTTP(res, req)
 	assert.Equal(200, res.Result().StatusCode)
-	var abi besudbind.RuntimeABI
+	var abi turbokeeperdbind.RuntimeABI
 	err = json.NewDecoder(res.Body).Decode(&abi)
 	assert.NoError(err)
 	assert.Equal("set", abi.Methods["set"].Name)
@@ -281,7 +281,7 @@ func TestRegisterExistingContract(t *testing.T) {
 			StoragePath: dir,
 			BaseURL:     "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -305,7 +305,7 @@ func TestRegisterExistingContract(t *testing.T) {
 	json.NewDecoder(res.Body).Decode(&abi)
 	assert.NotEmpty(abi.ID)
 
-	req = httptest.NewRequest("POST", "/abis/"+abi.ID+"/0x0123456789abcdef0123456789abcdef01234567?besud-register=testcontract", bytes.NewReader([]byte{}))
+	req = httptest.NewRequest("POST", "/abis/"+abi.ID+"/0x0123456789abcdef0123456789abcdef01234567?turbokeeperd-register=testcontract", bytes.NewReader([]byte{}))
 	res = httptest.NewRecorder()
 	router.ServeHTTP(res, req)
 	var contract contractInfo
@@ -313,7 +313,7 @@ func TestRegisterExistingContract(t *testing.T) {
 	assert.Equal(201, res.Code)
 	assert.Equal("/contracts/testcontract", contract.Path)
 
-	req = httptest.NewRequest("POST", "/abis/"+abi.ID+"/0x0123456789abcdef0123456789abcdef01234567?besud-register=testcontract", bytes.NewReader([]byte{}))
+	req = httptest.NewRequest("POST", "/abis/"+abi.ID+"/0x0123456789abcdef0123456789abcdef01234567?turbokeeperd-register=testcontract", bytes.NewReader([]byte{}))
 	res = httptest.NewRecorder()
 	router.ServeHTTP(res, req)
 	var errBody map[string]interface{}
@@ -327,7 +327,7 @@ func TestRegisterExistingContract(t *testing.T) {
 	returnedSwagger := spec.Swagger{}
 	assert.Equal(200, res.Code)
 	json.NewDecoder(res.Body).Decode(&returnedSwagger)
-	assert.Equal("testcontract", returnedSwagger.Info.Extensions["x-besu-registered-name"])
+	assert.Equal("testcontract", returnedSwagger.Info.Extensions["x-turbokeeper-registered-name"])
 	assert.Equal("/api/v1/contracts/testcontract", returnedSwagger.BasePath)
 
 }
@@ -339,7 +339,7 @@ func TestRemoteRegistrySwaggerOrABI(t *testing.T) {
 		&SmartContractGatewayConf{
 			BaseURL: "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -365,7 +365,7 @@ func TestRemoteRegistrySwaggerOrABI(t *testing.T) {
 	req = httptest.NewRequest("GET", "/g/test?abi", bytes.NewReader([]byte{}))
 	res = httptest.NewRecorder()
 	router.ServeHTTP(res, req)
-	var returnedABI besudbind.RuntimeABI
+	var returnedABI turbokeeperdbind.RuntimeABI
 	assert.Equal(200, res.Code)
 	json.NewDecoder(res.Body).Decode(&returnedABI)
 	assert.Equal("set", returnedABI.Methods["set"].Name)
@@ -447,7 +447,7 @@ func TestRemoteRegistryBadBI(t *testing.T) {
 		&SmartContractGatewayConf{
 			BaseURL: "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -455,10 +455,10 @@ func TestRemoteRegistryBadBI(t *testing.T) {
 	iMsg := newTestDeployMsg("0123456789abcdef0123456789abcdef01234567")
 	iMsg.Headers.ID = "xyz12345"
 	// Append two fallback methods - that is invalid
-	iMsg.ABI = append(iMsg.ABI, besudbind.ABIElementMarshaling{
+	iMsg.ABI = append(iMsg.ABI, turbokeeperdbind.ABIElementMarshaling{
 		Type: "fallback",
 	})
-	iMsg.ABI = append(iMsg.ABI, besudbind.ABIElementMarshaling{
+	iMsg.ABI = append(iMsg.ABI, turbokeeperdbind.ABIElementMarshaling{
 		Type: "fallback",
 	})
 	rr := &mockRR{
@@ -492,7 +492,7 @@ func TestRegisterContractBadAddress(t *testing.T) {
 			StoragePath: dir,
 			BaseURL:     "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -520,7 +520,7 @@ func TestRegisterContractNoRegisteredName(t *testing.T) {
 			StoragePath: dir,
 			BaseURL:     "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -565,7 +565,7 @@ func TestRegisterContractBadABI(t *testing.T) {
 			StoragePath: dir,
 			BaseURL:     "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -590,13 +590,13 @@ func TestLoadDeployMsgOKNoABIInIndex(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
 	)
 	scgw := s.(*smartContractGW)
-	goodMsg := &besudmessages.DeployContract{}
+	goodMsg := &turbokeeperdmessages.DeployContract{}
 	deployBytes, _ := json.Marshal(goodMsg)
 	scgw.abiIndex["abi1"] = &abiInfo{}
 	ioutil.WriteFile(path.Join(dir, "abi_abi1.deploy.json"), deployBytes, 0644)
@@ -612,7 +612,7 @@ func TestLoadDeployMsgMissing(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -630,7 +630,7 @@ func TestLoadDeployMsgFailure(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -650,7 +650,7 @@ func TestLoadDeployMsgRemoteLookupNotFound(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -668,13 +668,13 @@ func TestPreDeployCompileFailure(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: "/anypath",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
 	)
 	scgw := s.(*smartContractGW)
-	msg := &besudmessages.DeployContract{
+	msg := &turbokeeperdmessages.DeployContract{
 		Solidity: "bad solidity",
 	}
 	err := scgw.PreDeploy(msg)
@@ -689,13 +689,13 @@ func TestPreDeployMsgWrite(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: path.Join(dir, "badpath"),
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
 	)
 	scgw := s.(*smartContractGW)
-	msg := &besudmessages.DeployContract{
+	msg := &turbokeeperdmessages.DeployContract{
 		Solidity: simpleEventsSource(),
 	}
 
@@ -712,18 +712,18 @@ func TestPostDeployNoRegisteredName(t *testing.T) {
 			StoragePath: dir,
 			BaseURL:     "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
 	)
 	contractAddr := common.HexToAddress("0x0123456789AbcdeF0123456789abCdef01234567")
 	scgw := s.(*smartContractGW)
-	replyMsg := &besudmessages.TransactionReceipt{
-		ReplyCommon: besudmessages.ReplyCommon{
-			Headers: besudmessages.ReplyHeaders{
-				CommonHeaders: besudmessages.CommonHeaders{
-					MsgType: besudmessages.MsgTypeTransactionSuccess,
+	replyMsg := &turbokeeperdmessages.TransactionReceipt{
+		ReplyCommon: turbokeeperdmessages.ReplyCommon{
+			Headers: turbokeeperdmessages.ReplyHeaders{
+				CommonHeaders: turbokeeperdmessages.CommonHeaders{
+					MsgType: turbokeeperdmessages.MsgTypeTransactionSuccess,
 				},
 				ReqID: "message1",
 			},
@@ -732,7 +732,7 @@ func TestPostDeployNoRegisteredName(t *testing.T) {
 	}
 
 	deployFile := path.Join(dir, "abi_message1.deploy.json")
-	deployMsg := &besudmessages.DeployContract{}
+	deployMsg := &turbokeeperdmessages.DeployContract{}
 	deployBytes, _ := json.Marshal(deployMsg)
 	ioutil.WriteFile(deployFile, deployBytes, 0644)
 	err := scgw.PostDeploy(replyMsg)
@@ -752,7 +752,7 @@ func TestPostDeployRemoteRegisteredName(t *testing.T) {
 			StoragePath: dir,
 			BaseURL:     "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -762,14 +762,14 @@ func TestPostDeployRemoteRegisteredName(t *testing.T) {
 
 	contractAddr := common.HexToAddress("0x0123456789AbcdeF0123456789abCdef01234567")
 	scgw := s.(*smartContractGW)
-	replyMsg := &besudmessages.TransactionReceipt{
-		ReplyCommon: besudmessages.ReplyCommon{
-			Headers: besudmessages.ReplyHeaders{
-				CommonHeaders: besudmessages.CommonHeaders{
+	replyMsg := &turbokeeperdmessages.TransactionReceipt{
+		ReplyCommon: turbokeeperdmessages.ReplyCommon{
+			Headers: turbokeeperdmessages.ReplyHeaders{
+				CommonHeaders: turbokeeperdmessages.CommonHeaders{
 					Context: map[string]interface{}{
 						remoteRegistryContextKey: true,
 					},
-					MsgType: besudmessages.MsgTypeTransactionSuccess,
+					MsgType: turbokeeperdmessages.MsgTypeTransactionSuccess,
 				},
 				ReqID: "message1",
 			},
@@ -779,7 +779,7 @@ func TestPostDeployRemoteRegisteredName(t *testing.T) {
 	}
 
 	deployFile := path.Join(dir, "abi_message1.deploy.json")
-	deployMsg := &besudmessages.DeployContract{}
+	deployMsg := &turbokeeperdmessages.DeployContract{}
 	deployBytes, _ := json.Marshal(deployMsg)
 	ioutil.WriteFile(deployFile, deployBytes, 0644)
 	err := scgw.PostDeploy(replyMsg)
@@ -798,7 +798,7 @@ func TestPostDeployRemoteRegisteredNameNotSuccess(t *testing.T) {
 			StoragePath: dir,
 			BaseURL:     "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -808,14 +808,14 @@ func TestPostDeployRemoteRegisteredNameNotSuccess(t *testing.T) {
 
 	contractAddr := common.HexToAddress("0x0123456789AbcdeF0123456789abCdef01234567")
 	scgw := s.(*smartContractGW)
-	replyMsg := &besudmessages.TransactionReceipt{
-		ReplyCommon: besudmessages.ReplyCommon{
-			Headers: besudmessages.ReplyHeaders{
-				CommonHeaders: besudmessages.CommonHeaders{
+	replyMsg := &turbokeeperdmessages.TransactionReceipt{
+		ReplyCommon: turbokeeperdmessages.ReplyCommon{
+			Headers: turbokeeperdmessages.ReplyHeaders{
+				CommonHeaders: turbokeeperdmessages.CommonHeaders{
 					Context: map[string]interface{}{
 						remoteRegistryContextKey: true,
 					},
-					MsgType: besudmessages.MsgTypeTransactionFailure,
+					MsgType: turbokeeperdmessages.MsgTypeTransactionFailure,
 				},
 				ReqID: "message1",
 			},
@@ -825,7 +825,7 @@ func TestPostDeployRemoteRegisteredNameNotSuccess(t *testing.T) {
 	}
 
 	deployFile := path.Join(dir, "abi_message1.deploy.json")
-	deployMsg := &besudmessages.DeployContract{}
+	deployMsg := &turbokeeperdmessages.DeployContract{}
 	deployBytes, _ := json.Marshal(deployMsg)
 	ioutil.WriteFile(deployFile, deployBytes, 0644)
 	err := scgw.PostDeploy(replyMsg)
@@ -843,15 +843,15 @@ func TestPostDeployMissingContractAddress(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
 	)
 	scgw := s.(*smartContractGW)
-	replyMsg := &besudmessages.TransactionReceipt{
-		ReplyCommon: besudmessages.ReplyCommon{
-			Headers: besudmessages.ReplyHeaders{
+	replyMsg := &turbokeeperdmessages.TransactionReceipt{
+		ReplyCommon: turbokeeperdmessages.ReplyCommon{
+			Headers: turbokeeperdmessages.ReplyHeaders{
 				ReqID: "message1",
 			},
 		},
@@ -870,7 +870,7 @@ func TestStoreABIWriteFail(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: path.Join(dir, "badpath"),
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -892,7 +892,7 @@ func TestLoadABIForInstanceUnknown(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: path.Join(dir, "badpath"),
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -911,7 +911,7 @@ func TestLoadABIBadData(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -943,7 +943,7 @@ func TestBuildIndex(t *testing.T) {
 			},
 		},
 	}
-	okSwagger.Info.AddExtension("x-besu-deployment-id", "840b629f-2e46-413b-9671-553a886ca7bb")
+	okSwagger.Info.AddExtension("x-turbokeeper-deployment-id", "840b629f-2e46-413b-9671-553a886ca7bb")
 	swaggerBytes, _ = json.Marshal(&okSwagger)
 	ioutil.WriteFile(path.Join(dir, "contract_123456789abcdef0123456789abcdef012345678.swagger.json"), swaggerBytes, 0644)
 
@@ -956,8 +956,8 @@ func TestBuildIndex(t *testing.T) {
 			},
 		},
 	}
-	regSwagger.Info.AddExtension("x-besu-deployment-id", "840b629f-2e46-413b-9671-553a886ca7bb")
-	regSwagger.Info.AddExtension("x-besu-registered-name", "migratedcontract")
+	regSwagger.Info.AddExtension("x-turbokeeper-deployment-id", "840b629f-2e46-413b-9671-553a886ca7bb")
+	regSwagger.Info.AddExtension("x-turbokeeper-registered-name", "migratedcontract")
 	swaggerBytes, _ = json.Marshal(&regSwagger)
 	ioutil.WriteFile(path.Join(dir, "contract_23456789abcdef0123456789abcdef0123456789.swagger.json"), swaggerBytes, 0644)
 
@@ -970,7 +970,7 @@ func TestBuildIndex(t *testing.T) {
 		Path:         "/contracts/456789abcdef0123456789abcdef012345678901",
 		SwaggerURL:   "http://localhost:8080/contracts/456789abcdef0123456789abcdef012345678901?swagger",
 		RegisteredAs: "",
-		TimeSorted: besudmessages.TimeSorted{
+		TimeSorted: turbokeeperdmessages.TimeSorted{
 			CreatedISO8601: time.Now().UTC().Format(time.RFC3339),
 		},
 	}
@@ -982,14 +982,14 @@ func TestBuildIndex(t *testing.T) {
 		Path:         "/contracts/somecontract",
 		SwaggerURL:   "http://localhost:8080/contracts/somecontract?swagger",
 		RegisteredAs: "somecontract",
-		TimeSorted: besudmessages.TimeSorted{
+		TimeSorted: turbokeeperdmessages.TimeSorted{
 			CreatedISO8601: time.Now().UTC().Format(time.RFC3339),
 		},
 	}
 	info2Bytes, _ := json.Marshal(info2)
 	ioutil.WriteFile(path.Join(dir, "contract_56789abcdef0123456789abcdef0123456789012.instance.json"), info2Bytes, 0644)
 
-	deployMsg := &besudmessages.DeployContract{
+	deployMsg := &turbokeeperdmessages.DeployContract{
 		ContractName: "abideployable",
 	}
 	deployBytes, _ := json.Marshal(&deployMsg)
@@ -1001,7 +1001,7 @@ func TestBuildIndex(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -1056,7 +1056,7 @@ func TestGetContractOrABIFail(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -1110,7 +1110,7 @@ func TestGetContractUI(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -1144,7 +1144,7 @@ func TestAddABISingleSolidity(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -1181,7 +1181,7 @@ func TestAddABISingleSolidityBadContractName(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -1213,7 +1213,7 @@ func TestAddABIZipNested(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -1254,7 +1254,7 @@ func TestAddABIZipNestedListSolidity(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -1296,7 +1296,7 @@ func TestAddABIZipNestedListContracts(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -1338,7 +1338,7 @@ func TestAddABIBadZip(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -1375,7 +1375,7 @@ func TestAddABIZipNestedNoSource(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -1415,7 +1415,7 @@ func TestAddABIZiNotMultipart(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -1445,7 +1445,7 @@ func TestCompileMultipartFormSolidityBadDir(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -1466,7 +1466,7 @@ func TestCompileMultipartFormSolidityBadSolc(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -1491,7 +1491,7 @@ func TestCompileMultipartFormSolidityBadCompilerVerReq(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -1514,7 +1514,7 @@ func TestCompileMultipartFormSolidityBadSolidity(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -1537,7 +1537,7 @@ func TestExtractMultiPartFileBadFile(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -1560,7 +1560,7 @@ func TestExtractMultiPartFileBadInput(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -1583,14 +1583,14 @@ func TestStoreDeployableABIMissingABI(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
 	)
 	scgw := s.(*smartContractGW)
 
-	_, err := scgw.storeDeployableABI(&besudmessages.DeployContract{}, nil)
+	_, err := scgw.storeDeployableABI(&turbokeeperdmessages.DeployContract{}, nil)
 	assert.EqualError(err, "Must supply ABI to install an existing ABI into the REST Gateway")
 }
 
@@ -1602,7 +1602,7 @@ func TestAddFileToContractIndexBadFileSwallowsError(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -1620,7 +1620,7 @@ func TestAddFileToContractIndexBadDataSwallowsError(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -1640,7 +1640,7 @@ func TestAddFileToABIIndexBadFileSwallowsError(t *testing.T) {
 		&SmartContractGatewayConf{
 			StoragePath: dir,
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: true,
 		},
 		nil, nil, nil,
@@ -1670,22 +1670,22 @@ func testGWPathBody(method, path string, results interface{}, sm *mockSubMgr, bo
 
 func TestAddStreamNoSubMgr(t *testing.T) {
 	assert := assert.New(t)
-	res := testGWPath("POST", besudevents.StreamPathPrefix, nil, nil)
+	res := testGWPath("POST", turbokeeperdevents.StreamPathPrefix, nil, nil)
 	assert.Equal(405, res.Result().StatusCode)
 }
 
 func TestAddStreamOK(t *testing.T) {
 	assert := assert.New(t)
-	spec := &besudevents.StreamInfo{Type: "webhook", Name: "stream-1", Timestamps: true}
+	spec := &turbokeeperdevents.StreamInfo{Type: "webhook", Name: "stream-1", Timestamps: true}
 	b, _ := json.Marshal(spec)
-	req := httptest.NewRequest("POST", besudevents.StreamPathPrefix, bytes.NewReader(b))
+	req := httptest.NewRequest("POST", turbokeeperdevents.StreamPathPrefix, bytes.NewReader(b))
 	res := httptest.NewRecorder()
 	s := &smartContractGW{}
 	s.sm = &mockSubMgr{}
 	r := &httprouter.Router{}
 	s.AddRoutes(r)
 	r.ServeHTTP(res, req)
-	var newSpec besudevents.StreamInfo
+	var newSpec turbokeeperdevents.StreamInfo
 	json.NewDecoder(res.Body).Decode(&newSpec)
 	assert.Equal(200, res.Result().StatusCode)
 	assert.Equal("webhook", newSpec.Type)
@@ -1696,16 +1696,16 @@ func TestAddStreamOK(t *testing.T) {
 
 func TestAddStreamDefaultNoTimestamps(t *testing.T) {
 	assert := assert.New(t)
-	spec := &besudevents.StreamInfo{Type: "webhook", Name: "stream-no-timestamps"}
+	spec := &turbokeeperdevents.StreamInfo{Type: "webhook", Name: "stream-no-timestamps"}
 	b, _ := json.Marshal(spec)
-	req := httptest.NewRequest("POST", besudevents.StreamPathPrefix, bytes.NewReader(b))
+	req := httptest.NewRequest("POST", turbokeeperdevents.StreamPathPrefix, bytes.NewReader(b))
 	res := httptest.NewRecorder()
 	s := &smartContractGW{}
 	s.sm = &mockSubMgr{}
 	r := &httprouter.Router{}
 	s.AddRoutes(r)
 	r.ServeHTTP(res, req)
-	var newSpec besudevents.StreamInfo
+	var newSpec turbokeeperdevents.StreamInfo
 	json.NewDecoder(res.Body).Decode(&newSpec)
 	assert.Equal(200, res.Result().StatusCode)
 	assert.Equal("webhook", newSpec.Type)
@@ -1716,7 +1716,7 @@ func TestAddStreamDefaultNoTimestamps(t *testing.T) {
 
 func TestAddStreamBadData(t *testing.T) {
 	assert := assert.New(t)
-	req := httptest.NewRequest("POST", besudevents.StreamPathPrefix, bytes.NewReader([]byte(":bad json")))
+	req := httptest.NewRequest("POST", turbokeeperdevents.StreamPathPrefix, bytes.NewReader([]byte(":bad json")))
 	res := httptest.NewRecorder()
 	s := &smartContractGW{}
 	s.sm = &mockSubMgr{}
@@ -1731,9 +1731,9 @@ func TestAddStreamBadData(t *testing.T) {
 
 func TestAddStreamSubMgrError(t *testing.T) {
 	assert := assert.New(t)
-	spec := &besudevents.StreamInfo{Type: "webhook"}
+	spec := &turbokeeperdevents.StreamInfo{Type: "webhook"}
 	b, _ := json.Marshal(spec)
-	req := httptest.NewRequest("POST", besudevents.StreamPathPrefix, bytes.NewReader(b))
+	req := httptest.NewRequest("POST", turbokeeperdevents.StreamPathPrefix, bytes.NewReader(b))
 	res := httptest.NewRecorder()
 	s := &smartContractGW{}
 	s.sm = &mockSubMgr{err: fmt.Errorf("pop")}
@@ -1748,22 +1748,22 @@ func TestAddStreamSubMgrError(t *testing.T) {
 
 func TestUpdateStreamNoSubMgr(t *testing.T) {
 	assert := assert.New(t)
-	res := testGWPath("PATCH", besudevents.StreamPathPrefix+"/123", nil, nil)
+	res := testGWPath("PATCH", turbokeeperdevents.StreamPathPrefix+"/123", nil, nil)
 	assert.Equal(405, res.Result().StatusCode)
 }
 
 func TestUpdateStreamOK(t *testing.T) {
 	assert := assert.New(t)
-	spec := &besudevents.StreamInfo{Type: "webhook", Name: "stream-new-name", ID: "123"}
+	spec := &turbokeeperdevents.StreamInfo{Type: "webhook", Name: "stream-new-name", ID: "123"}
 	b, _ := json.Marshal(spec)
-	req := httptest.NewRequest("PATCH", besudevents.StreamPathPrefix+"/123", bytes.NewReader(b))
+	req := httptest.NewRequest("PATCH", turbokeeperdevents.StreamPathPrefix+"/123", bytes.NewReader(b))
 	res := httptest.NewRecorder()
 	s := &smartContractGW{}
 	s.sm = &mockSubMgr{}
 	r := &httprouter.Router{}
 	s.AddRoutes(r)
 	r.ServeHTTP(res, req)
-	var newSpec besudevents.StreamInfo
+	var newSpec turbokeeperdevents.StreamInfo
 	json.NewDecoder(res.Body).Decode(&newSpec)
 	assert.Equal(200, res.Result().StatusCode)
 	s.Shutdown()
@@ -1771,7 +1771,7 @@ func TestUpdateStreamOK(t *testing.T) {
 
 func TestUpdateStreamBadData(t *testing.T) {
 	assert := assert.New(t)
-	req := httptest.NewRequest("PATCH", besudevents.StreamPathPrefix+"/123", bytes.NewReader([]byte(":bad json")))
+	req := httptest.NewRequest("PATCH", turbokeeperdevents.StreamPathPrefix+"/123", bytes.NewReader([]byte(":bad json")))
 	res := httptest.NewRecorder()
 	s := &smartContractGW{}
 	s.sm = &mockSubMgr{}
@@ -1786,9 +1786,9 @@ func TestUpdateStreamBadData(t *testing.T) {
 
 func TestUpdateStreamNotFoundError(t *testing.T) {
 	assert := assert.New(t)
-	spec := &besudevents.StreamInfo{Type: "webhook", ID: "123"}
+	spec := &turbokeeperdevents.StreamInfo{Type: "webhook", ID: "123"}
 	b, _ := json.Marshal(spec)
-	req := httptest.NewRequest("PATCH", besudevents.StreamPathPrefix+"/123", bytes.NewReader(b))
+	req := httptest.NewRequest("PATCH", turbokeeperdevents.StreamPathPrefix+"/123", bytes.NewReader(b))
 	res := httptest.NewRecorder()
 	s := &smartContractGW{}
 	s.sm = &mockSubMgr{err: fmt.Errorf("pop")}
@@ -1803,9 +1803,9 @@ func TestUpdateStreamNotFoundError(t *testing.T) {
 
 func TestUpdateStreamSubMgrError(t *testing.T) {
 	assert := assert.New(t)
-	spec := &besudevents.StreamInfo{Type: "webhook", ID: "123"}
+	spec := &turbokeeperdevents.StreamInfo{Type: "webhook", ID: "123"}
 	b, _ := json.Marshal(spec)
-	req := httptest.NewRequest("PATCH", besudevents.StreamPathPrefix+"/123", bytes.NewReader(b))
+	req := httptest.NewRequest("PATCH", turbokeeperdevents.StreamPathPrefix+"/123", bytes.NewReader(b))
 	res := httptest.NewRecorder()
 	s := &smartContractGW{}
 	s.sm = &mockSubMgr{
@@ -1823,7 +1823,7 @@ func TestUpdateStreamSubMgrError(t *testing.T) {
 
 func TestListStreamsNoSubMgr(t *testing.T) {
 	assert := assert.New(t)
-	res := testGWPath("GET", besudevents.StreamPathPrefix, nil, nil)
+	res := testGWPath("GET", turbokeeperdevents.StreamPathPrefix, nil, nil)
 	assert.Equal(405, res.Result().StatusCode)
 }
 
@@ -1831,21 +1831,21 @@ func TestListStreams(t *testing.T) {
 	assert := assert.New(t)
 
 	mockSubMgr := &mockSubMgr{
-		streams: []*besudevents.StreamInfo{
+		streams: []*turbokeeperdevents.StreamInfo{
 			{
-				TimeSorted: besudmessages.TimeSorted{
+				TimeSorted: turbokeeperdmessages.TimeSorted{
 					CreatedISO8601: time.Now().UTC().Format(time.RFC3339),
 				}, ID: "earlier", Name: "stream-1",
 			},
 			{
-				TimeSorted: besudmessages.TimeSorted{
+				TimeSorted: turbokeeperdmessages.TimeSorted{
 					CreatedISO8601: time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339),
 				}, ID: "later", Name: "stream-2",
 			},
 		},
 	}
-	var results []*besudevents.StreamInfo
-	res := testGWPath("GET", besudevents.StreamPathPrefix, &results, mockSubMgr)
+	var results []*turbokeeperdevents.StreamInfo
+	res := testGWPath("GET", turbokeeperdevents.StreamPathPrefix, &results, mockSubMgr)
 	assert.Equal(200, res.Result().StatusCode)
 	assert.Equal(2, len(results))
 	assert.Equal("later", results[0].ID)
@@ -1858,21 +1858,21 @@ func TestListSubs(t *testing.T) {
 	assert := assert.New(t)
 
 	mockSubMgr := &mockSubMgr{
-		subs: []*besudevents.SubscriptionInfo{
+		subs: []*turbokeeperdevents.SubscriptionInfo{
 			{
-				TimeSorted: besudmessages.TimeSorted{
+				TimeSorted: turbokeeperdmessages.TimeSorted{
 					CreatedISO8601: time.Now().UTC().Format(time.RFC3339),
 				}, ID: "earlier",
 			},
 			{
-				TimeSorted: besudmessages.TimeSorted{
+				TimeSorted: turbokeeperdmessages.TimeSorted{
 					CreatedISO8601: time.Now().UTC().Add(1 * time.Hour).Format(time.RFC3339),
 				}, ID: "later",
 			},
 		},
 	}
-	var results []*besudevents.SubscriptionInfo
-	res := testGWPath("GET", besudevents.SubPathPrefix, &results, mockSubMgr)
+	var results []*turbokeeperdevents.SubscriptionInfo
+	res := testGWPath("GET", turbokeeperdevents.SubPathPrefix, &results, mockSubMgr)
 	assert.Equal(200, res.Result().StatusCode)
 	assert.Equal(2, len(results))
 	assert.Equal("later", results[0].ID)
@@ -1883,10 +1883,10 @@ func TestGetSub(t *testing.T) {
 	assert := assert.New(t)
 
 	mockSubMgr := &mockSubMgr{
-		sub: &besudevents.SubscriptionInfo{ID: "123"},
+		sub: &turbokeeperdevents.SubscriptionInfo{ID: "123"},
 	}
-	var result besudevents.SubscriptionInfo
-	res := testGWPath("GET", besudevents.SubPathPrefix+"/123", &result, mockSubMgr)
+	var result turbokeeperdevents.SubscriptionInfo
+	res := testGWPath("GET", turbokeeperdevents.SubPathPrefix+"/123", &result, mockSubMgr)
 	assert.Equal(200, res.Result().StatusCode)
 	assert.Equal("123", result.ID)
 }
@@ -1895,10 +1895,10 @@ func TestGetStream(t *testing.T) {
 	assert := assert.New(t)
 
 	mockSubMgr := &mockSubMgr{
-		stream: &besudevents.StreamInfo{ID: "123"},
+		stream: &turbokeeperdevents.StreamInfo{ID: "123"},
 	}
-	var result besudevents.StreamInfo
-	res := testGWPath("GET", besudevents.StreamPathPrefix+"/123", &result, mockSubMgr)
+	var result turbokeeperdevents.StreamInfo
+	res := testGWPath("GET", turbokeeperdevents.StreamPathPrefix+"/123", &result, mockSubMgr)
 	assert.Equal(200, res.Result().StatusCode)
 	assert.Equal("123", result.ID)
 }
@@ -1906,8 +1906,8 @@ func TestGetStream(t *testing.T) {
 func TestGetSubNoSubMgr(t *testing.T) {
 	assert := assert.New(t)
 
-	var result besudevents.SubscriptionInfo
-	res := testGWPath("GET", besudevents.SubPathPrefix+"/123", &result, nil)
+	var result turbokeeperdevents.SubscriptionInfo
+	res := testGWPath("GET", turbokeeperdevents.SubPathPrefix+"/123", &result, nil)
 	assert.Equal(405, res.Result().StatusCode)
 }
 
@@ -1915,8 +1915,8 @@ func TestGetSubNotFound(t *testing.T) {
 	assert := assert.New(t)
 
 	mockSubMgr := &mockSubMgr{err: fmt.Errorf("not found")}
-	var result besudevents.SubscriptionInfo
-	res := testGWPath("GET", besudevents.SubPathPrefix+"/123", &result, mockSubMgr)
+	var result turbokeeperdevents.SubscriptionInfo
+	res := testGWPath("GET", turbokeeperdevents.SubPathPrefix+"/123", &result, mockSubMgr)
 	assert.Equal(404, res.Result().StatusCode)
 }
 
@@ -1924,7 +1924,7 @@ func TestDeleteSub(t *testing.T) {
 	assert := assert.New(t)
 
 	mockSubMgr := &mockSubMgr{}
-	res := testGWPath("DELETE", besudevents.SubPathPrefix+"/123", nil, mockSubMgr)
+	res := testGWPath("DELETE", turbokeeperdevents.SubPathPrefix+"/123", nil, mockSubMgr)
 	assert.Equal(204, res.Result().StatusCode)
 }
 
@@ -1936,7 +1936,7 @@ func TestResetSub(t *testing.T) {
 	}
 	b, _ := json.Marshal(&reqData)
 	mockSubMgr := &mockSubMgr{}
-	res := testGWPathBody("POST", besudevents.SubPathPrefix+"/123/reset", nil, mockSubMgr, bytes.NewReader(b))
+	res := testGWPathBody("POST", turbokeeperdevents.SubPathPrefix+"/123/reset", nil, mockSubMgr, bytes.NewReader(b))
 	assert.Equal(204, res.Result().StatusCode)
 }
 
@@ -1950,13 +1950,13 @@ func TestResetSubFail(t *testing.T) {
 	mockSubMgr := &mockSubMgr{
 		err: fmt.Errorf("pop"),
 	}
-	res := testGWPathBody("POST", besudevents.SubPathPrefix+"/123/reset", nil, mockSubMgr, bytes.NewReader(b))
+	res := testGWPathBody("POST", turbokeeperdevents.SubPathPrefix+"/123/reset", nil, mockSubMgr, bytes.NewReader(b))
 	assert.Equal(500, res.Result().StatusCode)
 }
 
 func TestResetSubNoManager(t *testing.T) {
 	assert := assert.New(t)
-	res := testGWPath("POST", besudevents.SubPathPrefix+"/123/reset", nil, nil)
+	res := testGWPath("POST", turbokeeperdevents.SubPathPrefix+"/123/reset", nil, nil)
 	assert.Equal(405, res.Result().StatusCode)
 }
 
@@ -1964,14 +1964,14 @@ func TestDeleteStream(t *testing.T) {
 	assert := assert.New(t)
 
 	mockSubMgr := &mockSubMgr{}
-	res := testGWPath("DELETE", besudevents.StreamPathPrefix+"/123", nil, mockSubMgr)
+	res := testGWPath("DELETE", turbokeeperdevents.StreamPathPrefix+"/123", nil, mockSubMgr)
 	assert.Equal(204, res.Result().StatusCode)
 }
 
 func TestDeleteSubNoSubMgr(t *testing.T) {
 	assert := assert.New(t)
 
-	res := testGWPath("DELETE", besudevents.SubPathPrefix+"/123", nil, nil)
+	res := testGWPath("DELETE", turbokeeperdevents.SubPathPrefix+"/123", nil, nil)
 	assert.Equal(405, res.Result().StatusCode)
 }
 
@@ -1980,7 +1980,7 @@ func TestDeleteSubError(t *testing.T) {
 
 	mockSubMgr := &mockSubMgr{err: fmt.Errorf("not found")}
 	var errInfo = restErrMsg{}
-	res := testGWPath("DELETE", besudevents.SubPathPrefix+"/123", &errInfo, mockSubMgr)
+	res := testGWPath("DELETE", turbokeeperdevents.SubPathPrefix+"/123", &errInfo, mockSubMgr)
 	assert.Equal(500, res.Result().StatusCode)
 	assert.Equal("not found", errInfo.Message)
 }
@@ -1989,7 +1989,7 @@ func TestSuspendStream(t *testing.T) {
 	assert := assert.New(t)
 
 	mockSubMgr := &mockSubMgr{}
-	res := testGWPath("POST", besudevents.StreamPathPrefix+"/123/suspend", nil, mockSubMgr)
+	res := testGWPath("POST", turbokeeperdevents.StreamPathPrefix+"/123/suspend", nil, mockSubMgr)
 	assert.Equal(204, res.Result().StatusCode)
 	assert.True(mockSubMgr.suspended)
 }
@@ -1998,7 +1998,7 @@ func TestResumeStream(t *testing.T) {
 	assert := assert.New(t)
 
 	mockSubMgr := &mockSubMgr{}
-	res := testGWPath("POST", besudevents.StreamPathPrefix+"/123/resume", nil, mockSubMgr)
+	res := testGWPath("POST", turbokeeperdevents.StreamPathPrefix+"/123/resume", nil, mockSubMgr)
 	assert.Equal(204, res.Result().StatusCode)
 	assert.True(mockSubMgr.resumed)
 }
@@ -2008,7 +2008,7 @@ func TestResumeStreamFail(t *testing.T) {
 
 	mockSubMgr := &mockSubMgr{err: fmt.Errorf("pop")}
 	var errInfo = restErrMsg{}
-	res := testGWPath("POST", besudevents.StreamPathPrefix+"/123/resume", &errInfo, mockSubMgr)
+	res := testGWPath("POST", turbokeeperdevents.StreamPathPrefix+"/123/resume", &errInfo, mockSubMgr)
 	assert.Equal(500, res.Result().StatusCode)
 	assert.Equal("pop", errInfo.Message)
 }
@@ -2016,7 +2016,7 @@ func TestResumeStreamFail(t *testing.T) {
 func TestSuspendNoSubMgr(t *testing.T) {
 	assert := assert.New(t)
 
-	res := testGWPath("POST", besudevents.StreamPathPrefix+"/123/resume", nil, nil)
+	res := testGWPath("POST", turbokeeperdevents.StreamPathPrefix+"/123/resume", nil, nil)
 	assert.Equal(405, res.Result().StatusCode)
 }
 
@@ -2027,7 +2027,7 @@ func TestCheckNameAvailableRRDuplicate(t *testing.T) {
 		&SmartContractGatewayConf{
 			BaseURL: "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -2049,7 +2049,7 @@ func TestCheckNameAvailableRRFail(t *testing.T) {
 		&SmartContractGatewayConf{
 			BaseURL: "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -2067,13 +2067,13 @@ func TestCheckNameAvailableRRFail(t *testing.T) {
 func TestWithEventsAuthRequiresAuth(t *testing.T) {
 	assert := assert.New(t)
 
-	besudauth.RegisterSecurityModule(&besudauthtest.TestSecurityModule{})
+	turbokeeperdauth.RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
 
 	scgw, _ := NewSmartContractGateway(
 		&SmartContractGatewayConf{
 			BaseURL: "http://localhost/api/v1",
 		},
-		&besudtx.TxnProcessorConf{
+		&turbokeeperdtx.TxnProcessorConf{
 			OrionPrivateAPIS: false,
 		},
 		nil, nil, nil,
@@ -2092,5 +2092,5 @@ func TestWithEventsAuthRequiresAuth(t *testing.T) {
 
 	assert.Equal(res.Code, 401)
 
-	besudauth.RegisterSecurityModule(nil)
+	turbokeeperdauth.RegisterSecurityModule(nil)
 }
