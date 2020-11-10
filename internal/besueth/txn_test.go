@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudeth
+package turbokeeperdeth
 
 import (
 	"context"
@@ -24,8 +24,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/freight-trust/zeroxyz/internal/besudbind"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -66,7 +66,7 @@ const (
 func TestNewContractDeployTxnSimpleStorage(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{float64(999999)}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -97,7 +97,7 @@ func TestNewContractDeployTxnSimpleStorage(t *testing.T) {
 func TestNewContractDeployTxnSimpleStorageCalcGas(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{float64(999999)}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -128,7 +128,7 @@ func TestNewContractDeployTxnSimpleStorageCalcGas(t *testing.T) {
 func TestNewContractDeployTxnSimpleStoragePrivate(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{float64(999999)}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -159,7 +159,7 @@ func TestNewContractDeployTxnSimpleStoragePrivate(t *testing.T) {
 func TestNewContractDeployTxnSimpleStoragePrivateOrion(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{float64(999999)}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -190,7 +190,7 @@ func TestNewContractDeployTxnSimpleStoragePrivateOrion(t *testing.T) {
 func TestNewContractDeployTxnSimpleStoragePrivateOrionMissingPrivateFrom(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{float64(999999)}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -209,7 +209,7 @@ func TestNewContractDeployTxnSimpleStoragePrivateOrionMissingPrivateFrom(t *test
 func TestNewContractDeployTxnSimpleStorageCalcGasFailAndCallSucceeds(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{float64(999999)}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -228,7 +228,7 @@ func TestNewContractDeployTxnSimpleStorageCalcGasFailAndCallSucceeds(t *testing.
 func TestNewContractDeployTxnSimpleStorageCalcGasFailAndCallFailsAsExpected(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{float64(999999)}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -248,7 +248,7 @@ func TestNewContractDeployTxnSimpleStorageCalcGasFailAndCallFailsAsExpected(t *t
 func TestNewContractDeployMissingCompiledOrSolidity(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Parameters = []interface{}{float64(999999)}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
 	msg.Nonce = "123"
@@ -265,7 +265,7 @@ func TestNewContractDeployPrecompiledSimpleStorage(t *testing.T) {
 	c, err := CompileContract(simpleStorage, "simplestorage", "", "")
 	assert.NoError(err)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Compiled = c.Compiled
 	msg.ABI = c.ABI
 	msg.Parameters = []interface{}{float64(999999)}
@@ -297,7 +297,7 @@ func TestNewContractDeployPrecompiledSimpleStorage(t *testing.T) {
 func TestNewContractDeployTxnBadNonce(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{float64(999999)}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -312,7 +312,7 @@ func TestNewContractDeployTxnBadNonce(t *testing.T) {
 func TestNewContractDeployBadValue(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{float64(999999)}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -327,7 +327,7 @@ func TestNewContractDeployBadValue(t *testing.T) {
 func TestNewContractDeployBadGas(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{float64(999999)}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -342,7 +342,7 @@ func TestNewContractDeployBadGas(t *testing.T) {
 func TestNewContractDeployBadGasPrice(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{float64(999999)}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -357,7 +357,7 @@ func TestNewContractDeployBadGasPrice(t *testing.T) {
 func TestNewContractDeployTxnBadContract(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = "badness"
 	_, err := NewContractDeployTxn(&msg, nil)
 	assert.Regexp("Solidity compilation failed", err.Error())
@@ -366,7 +366,7 @@ func TestNewContractDeployTxnBadContract(t *testing.T) {
 func TestNewContractDeployStringForNumber(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{"123"}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -381,7 +381,7 @@ func TestNewContractDeployStringForNumber(t *testing.T) {
 func TestNewContractDeployTxnBadContractName(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.ContractName = "wrongun"
 	_, err := NewContractDeployTxn(&msg, nil)
@@ -390,7 +390,7 @@ func TestNewContractDeployTxnBadContractName(t *testing.T) {
 func TestNewContractDeploySpecificContractName(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = twoContracts
 	msg.ContractName = "contract1"
 	msg.Parameters = []interface{}{}
@@ -406,7 +406,7 @@ func TestNewContractDeploySpecificContractName(t *testing.T) {
 func TestNewContractDeployMissingNameMultipleContracts(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = twoContracts
 	_, err := NewContractDeployTxn(&msg, nil)
 	assert.Regexp("More than one contract in Solidity file", err.Error())
@@ -415,7 +415,7 @@ func TestNewContractDeployMissingNameMultipleContracts(t *testing.T) {
 func TestNewContractDeployBadNumber(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{"ABCD"}
 	_, err := NewContractDeployTxn(&msg, nil)
@@ -425,7 +425,7 @@ func TestNewContractDeployBadNumber(t *testing.T) {
 func TestNewContractDeployBadTypeForNumber(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{false}
 	_, err := NewContractDeployTxn(&msg, nil)
@@ -435,7 +435,7 @@ func TestNewContractDeployBadTypeForNumber(t *testing.T) {
 func TestNewContractDeployMissingParam(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = simpleStorage
 	msg.Parameters = []interface{}{}
 	_, err := NewContractDeployTxn(&msg, nil)
@@ -445,7 +445,7 @@ func TestNewContractDeployMissingParam(t *testing.T) {
 func testComplexParam(t *testing.T, solidityType string, val interface{}, expectedErr string) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Solidity = "pragma solidity >=0.4.22 <0.7; contract test {constructor(" + solidityType + " p1) public {}}"
 	msg.Parameters = []interface{}{val}
 	msg.From = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
@@ -584,11 +584,11 @@ func TestTypeNotYetSupported(t *testing.T) {
 func TestSendTxnABIParam(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{"123", float64(123), "abc", "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c", "0xfeedbeef"}
-	msg.Method = &besudbind.ABIElementMarshaling{
+	msg.Method = &turbokeeperdbind.ABIElementMarshaling{
 		Name: "testFunc",
-		Inputs: []besudbind.ABIArgumentMarshaling{
+		Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "param1",
 				Type: "uint8",
@@ -610,7 +610,7 @@ func TestSendTxnABIParam(t *testing.T) {
 				Type: "bytes",
 			},
 		},
-		Outputs: []besudbind.ABIArgumentMarshaling{
+		Outputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "ret1",
 				Type: "uint256",
@@ -646,7 +646,7 @@ func TestSendTxnABIParam(t *testing.T) {
 func TestSendTxnInlineParam(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{}
 
 	param1 := make(map[string]interface{})
@@ -699,7 +699,7 @@ func TestSendTxnInlineParam(t *testing.T) {
 func TestSendTxnNilParam(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{}
 
 	param1 := make(map[string]interface{})
@@ -721,8 +721,8 @@ func TestSendTxnNilParam(t *testing.T) {
 
 func TestNewSendTxnMissingParamTypes(t *testing.T) {
 	assert := assert.New(t)
-	_, err := NewSendTxn(&besudmessages.SendTransaction{
-		TransactionCommon: besudmessages.TransactionCommon{
+	_, err := NewSendTxn(&turbokeeperdmessages.SendTransaction{
+		TransactionCommon: turbokeeperdmessages.TransactionCommon{
 			Parameters: []interface{}{
 				map[string]interface{}{
 					"wrong": "stuff",
@@ -760,7 +760,7 @@ func TestCallMethod(t *testing.T) {
 	param4["value"] = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
 
 	genMethod := func(params []interface{}) *abi.Method {
-		uint256Type, _ := besudbind.ABITypeFor("uint256")
+		uint256Type, _ := turbokeeperdbind.ABITypeFor("uint256")
 		inputs := make(abi.Arguments, len(params))
 		for i := range params {
 			abiType, _ := abi.NewType(params[i].(map[string]interface{})["type"].(string), "", []abi.ArgumentMarshaling{})
@@ -957,7 +957,7 @@ func TestCallMethodBadArgs(t *testing.T) {
 func TestSendTxnNodeAssignNonce(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{}
 
 	param1 := make(map[string]interface{})
@@ -1010,7 +1010,7 @@ func TestSendTxnNodeAssignNonce(t *testing.T) {
 func TestSendWithTXSignerContractOK(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{}
 
 	signer := &mockTXSigner{
@@ -1038,7 +1038,7 @@ func TestSendWithTXSignerContractOK(t *testing.T) {
 func TestSendWithTXSignerOK(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{}
 
 	signer := &mockTXSigner{
@@ -1068,7 +1068,7 @@ func TestSendWithTXSignerOK(t *testing.T) {
 func TestSendWithTXSignerFail(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{}
 
 	signer := &mockTXSigner{
@@ -1097,7 +1097,7 @@ func TestSendWithTXSignerFail(t *testing.T) {
 func TestSendWithTXSignerFailPrivate(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{}
 
 	signer := &mockTXSigner{
@@ -1127,7 +1127,7 @@ func TestSendWithTXSignerFailPrivate(t *testing.T) {
 func TestNewContractWithTXSignerOK(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Parameters = []interface{}{}
 
 	signer := &mockTXSigner{
@@ -1157,7 +1157,7 @@ func TestNewContractWithTXSignerOK(t *testing.T) {
 func TestNewNilTXSignerOK(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.DeployContract
+	var msg turbokeeperdmessages.DeployContract
 	msg.Parameters = []interface{}{}
 
 	signer := &mockTXSigner{
@@ -1185,7 +1185,7 @@ func TestNewNilTXSignerOK(t *testing.T) {
 func TestSendTxnRPFError(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{}
 
 	msg.MethodName = "testFunc"
@@ -1211,7 +1211,7 @@ func TestSendTxnRPFError(t *testing.T) {
 func TestSendTxnInlineBadParamType(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{}
 
 	param1 := make(map[string]interface{})
@@ -1219,7 +1219,7 @@ func TestSendTxnInlineBadParamType(t *testing.T) {
 	param1["type"] = "badness"
 	param1["value"] = "123"
 
-	msg.Method = &besudbind.ABIElementMarshaling{
+	msg.Method = &turbokeeperdbind.ABIElementMarshaling{
 		Name: "testFunc",
 	}
 	msg.To = "0x2b8c0ECc76d0759a8F50b2E14A6881367D805832"
@@ -1235,14 +1235,14 @@ func TestSendTxnInlineBadParamType(t *testing.T) {
 func TestSendTxnInlineMissingParamType(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{}
 
 	param1 := make(map[string]interface{})
 	msg.Parameters = append(msg.Parameters, param1)
 	param1["value"] = "123"
 
-	msg.Method = &besudbind.ABIElementMarshaling{
+	msg.Method = &turbokeeperdbind.ABIElementMarshaling{
 		Name: "testFunc",
 	}
 	msg.To = "0x2b8c0ECc76d0759a8F50b2E14A6881367D805832"
@@ -1258,14 +1258,14 @@ func TestSendTxnInlineMissingParamType(t *testing.T) {
 func TestSendTxnInlineMissingParamValue(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{}
 
 	param1 := make(map[string]interface{})
 	msg.Parameters = append(msg.Parameters, param1)
 	param1["type"] = "uint256"
 
-	msg.Method = &besudbind.ABIElementMarshaling{
+	msg.Method = &turbokeeperdbind.ABIElementMarshaling{
 		Name: "testFunc",
 	}
 	msg.To = "0x2b8c0ECc76d0759a8F50b2E14A6881367D805832"
@@ -1281,7 +1281,7 @@ func TestSendTxnInlineMissingParamValue(t *testing.T) {
 func TestSendTxnInlineBadTypeType(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{}
 
 	param1 := make(map[string]interface{})
@@ -1289,7 +1289,7 @@ func TestSendTxnInlineBadTypeType(t *testing.T) {
 	param1["type"] = false
 	param1["value"] = "abcde"
 
-	msg.Method = &besudbind.ABIElementMarshaling{
+	msg.Method = &turbokeeperdbind.ABIElementMarshaling{
 		Name: "testFunc",
 	}
 	msg.To = "0x2b8c0ECc76d0759a8F50b2E14A6881367D805832"
@@ -1304,16 +1304,16 @@ func TestSendTxnInlineBadTypeType(t *testing.T) {
 func TestSendTxnBadInputType(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
-	msg.Method = &besudbind.ABIElementMarshaling{
+	var msg turbokeeperdmessages.SendTransaction
+	msg.Method = &turbokeeperdbind.ABIElementMarshaling{
 		Name: "testFunc",
-		Inputs: []besudbind.ABIArgumentMarshaling{
+		Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "param1",
 				Type: "badness",
 			},
 		},
-		Outputs: []besudbind.ABIArgumentMarshaling{
+		Outputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "ret1",
 				Type: "uint256",
@@ -1327,9 +1327,9 @@ func TestSendTxnBadInputType(t *testing.T) {
 func TestSendTxnMissingMethod(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{"123"}
-	msg.Method = &besudbind.ABIElementMarshaling{}
+	msg.Method = &turbokeeperdbind.ABIElementMarshaling{}
 	msg.To = "0x2b8c0ECc76d0759a8F50b2E14A6881367D805832"
 	msg.From = "abc"
 	msg.Nonce = "123"
@@ -1342,17 +1342,17 @@ func TestSendTxnMissingMethod(t *testing.T) {
 func TestSendTxnBadFrom(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{"123"}
-	msg.Method = &besudbind.ABIElementMarshaling{
+	msg.Method = &turbokeeperdbind.ABIElementMarshaling{
 		Name: "testFunc",
-		Inputs: []besudbind.ABIArgumentMarshaling{
+		Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "param1",
 				Type: "uint8",
 			},
 		},
-		Outputs: []besudbind.ABIArgumentMarshaling{
+		Outputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "ret1",
 				Type: "uint256",
@@ -1372,17 +1372,17 @@ func TestSendTxnBadFrom(t *testing.T) {
 func TestSendTxnBadTo(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{"123"}
-	msg.Method = &besudbind.ABIElementMarshaling{
+	msg.Method = &turbokeeperdbind.ABIElementMarshaling{
 		Name: "testFunc",
-		Inputs: []besudbind.ABIArgumentMarshaling{
+		Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "param1",
 				Type: "uint8",
 			},
 		},
-		Outputs: []besudbind.ABIArgumentMarshaling{
+		Outputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "ret1",
 				Type: "uint256",
@@ -1402,16 +1402,16 @@ func TestSendTxnBadTo(t *testing.T) {
 func TestSendTxnBadOutputType(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
-	msg.Method = &besudbind.ABIElementMarshaling{
+	var msg turbokeeperdmessages.SendTransaction
+	msg.Method = &turbokeeperdbind.ABIElementMarshaling{
 		Name: "testFunc",
-		Inputs: []besudbind.ABIArgumentMarshaling{
+		Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "param1",
 				Type: "uint256",
 			},
 		},
-		Outputs: []besudbind.ABIArgumentMarshaling{
+		Outputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "ret1",
 				Type: "badness",
@@ -1425,17 +1425,17 @@ func TestSendTxnBadOutputType(t *testing.T) {
 func TestSendBadParams(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{"abc"}
-	msg.Method = &besudbind.ABIElementMarshaling{
+	msg.Method = &turbokeeperdbind.ABIElementMarshaling{
 		Name: "testFunc",
-		Inputs: []besudbind.ABIArgumentMarshaling{
+		Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "param1",
 				Type: "int8",
 			},
 		},
-		Outputs: []besudbind.ABIArgumentMarshaling{
+		Outputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "ret1",
 				Type: "uint256",
@@ -1449,17 +1449,17 @@ func TestSendBadParams(t *testing.T) {
 func TestSendTxnPackError(t *testing.T) {
 	assert := assert.New(t)
 
-	var msg besudmessages.SendTransaction
+	var msg turbokeeperdmessages.SendTransaction
 	msg.Parameters = []interface{}{""}
-	msg.Method = &besudbind.ABIElementMarshaling{
+	msg.Method = &turbokeeperdbind.ABIElementMarshaling{
 		Name: "testFunc",
-		Inputs: []besudbind.ABIArgumentMarshaling{
+		Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "param1",
 				Type: "bytes1",
 			},
 		},
-		Outputs: []besudbind.ABIArgumentMarshaling{
+		Outputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name: "ret1",
 				Type: "uint256",
@@ -1473,15 +1473,15 @@ func TestSendTxnPackError(t *testing.T) {
 func TestProcessRLPBytesValidTypes(t *testing.T) {
 	assert := assert.New(t)
 
-	t1, _ := besudbind.ABITypeFor("string")
-	t2, _ := besudbind.ABITypeFor("int256[]")
-	t3, _ := besudbind.ABITypeFor("bool")
-	t4, _ := besudbind.ABITypeFor("bytes1")
-	t5, _ := besudbind.ABITypeFor("address")
-	t6, _ := besudbind.ABITypeFor("bytes4")
-	t7, _ := besudbind.ABITypeFor("uint256")
-	t8, _ := besudbind.ABITypeFor("int32[]")
-	t9, _ := besudbind.ABITypeFor("uint32[]")
+	t1, _ := turbokeeperdbind.ABITypeFor("string")
+	t2, _ := turbokeeperdbind.ABITypeFor("int256[]")
+	t3, _ := turbokeeperdbind.ABITypeFor("bool")
+	t4, _ := turbokeeperdbind.ABITypeFor("bytes1")
+	t5, _ := turbokeeperdbind.ABITypeFor("address")
+	t6, _ := turbokeeperdbind.ABITypeFor("bytes4")
+	t7, _ := turbokeeperdbind.ABITypeFor("uint256")
+	t8, _ := turbokeeperdbind.ABITypeFor("int32[]")
+	t9, _ := turbokeeperdbind.ABITypeFor("uint32[]")
 	methodABI := &abi.Method{
 		Name:   "echoTypes2",
 		Inputs: []abi.Argument{},
@@ -1695,7 +1695,7 @@ func TestGenTupleMapOutputBadTypeValMismatch(t *testing.T) {
 func TestProcessRLPBytesInvalidNumber(t *testing.T) {
 	assert := assert.New(t)
 
-	t1, _ := besudbind.ABITypeFor("int32")
+	t1, _ := turbokeeperdbind.ABITypeFor("int32")
 	_, err := mapOutput("test1", "int256", &t1, "not an int")
 	assert.EqualError(err, "Expected number type in JSON/RPC response for test1 (int256). Received string")
 }
@@ -1703,7 +1703,7 @@ func TestProcessRLPBytesInvalidNumber(t *testing.T) {
 func TestProcessRLPBytesInvalidBool(t *testing.T) {
 	assert := assert.New(t)
 
-	t1, _ := besudbind.ABITypeFor("bool")
+	t1, _ := turbokeeperdbind.ABITypeFor("bool")
 	_, err := mapOutput("test1", "bool", &t1, "not a bool")
 	assert.EqualError(err, "Expected boolean type in JSON/RPC response for test1 (bool). Received string")
 }
@@ -1711,7 +1711,7 @@ func TestProcessRLPBytesInvalidBool(t *testing.T) {
 func TestProcessRLPBytesInvalidString(t *testing.T) {
 	assert := assert.New(t)
 
-	t1, _ := besudbind.ABITypeFor("string")
+	t1, _ := turbokeeperdbind.ABITypeFor("string")
 	_, err := mapOutput("test1", "string", &t1, 42)
 	assert.EqualError(err, "Expected string array type in JSON/RPC response for test1 (string). Received int")
 }
@@ -1719,7 +1719,7 @@ func TestProcessRLPBytesInvalidString(t *testing.T) {
 func TestProcessRLPBytesInvalidByteArray(t *testing.T) {
 	assert := assert.New(t)
 
-	t1, _ := besudbind.ABITypeFor("address")
+	t1, _ := turbokeeperdbind.ABITypeFor("address")
 	_, err := mapOutput("test1", "address", &t1, 42)
 	assert.EqualError(err, "Expected []byte type in JSON/RPC response for test1 (address). Received int")
 }
@@ -1727,7 +1727,7 @@ func TestProcessRLPBytesInvalidByteArray(t *testing.T) {
 func TestProcessRLPBytesInvalidArray(t *testing.T) {
 	assert := assert.New(t)
 
-	t1, _ := besudbind.ABITypeFor("int32[]")
+	t1, _ := turbokeeperdbind.ABITypeFor("int32[]")
 	_, err := mapOutput("test1", "int32[]", &t1, 42)
 	assert.EqualError(err, "Expected slice type in JSON/RPC response for test1 (int32[]). Received int")
 }
@@ -1735,7 +1735,7 @@ func TestProcessRLPBytesInvalidArray(t *testing.T) {
 func TestProcessRLPBytesInvalidArrayType(t *testing.T) {
 	assert := assert.New(t)
 
-	t1, _ := besudbind.ABITypeFor("int32[]")
+	t1, _ := turbokeeperdbind.ABITypeFor("int32[]")
 	_, err := mapOutput("test1", "int32[]", &t1, []string{"wrong"})
 	assert.EqualError(err, "Expected number type in JSON/RPC response for test1[0] (int32[]). Received string")
 }
@@ -1743,7 +1743,7 @@ func TestProcessRLPBytesInvalidArrayType(t *testing.T) {
 func TestProcessRLPBytesInvalidTypeByte(t *testing.T) {
 	assert := assert.New(t)
 
-	t1, _ := besudbind.ABITypeFor("bool")
+	t1, _ := turbokeeperdbind.ABITypeFor("bool")
 	t1.T = 42
 	_, err := mapOutput("test1", "randomness", &t1, 42)
 	assert.EqualError(err, "Unable to process type for test1 (randomness). Received int")
@@ -1752,7 +1752,7 @@ func TestProcessRLPBytesInvalidTypeByte(t *testing.T) {
 func TestProcessRLPBytesUnpackFailure(t *testing.T) {
 	assert := assert.New(t)
 
-	t1, _ := besudbind.ABITypeFor("string")
+	t1, _ := turbokeeperdbind.ABITypeFor("string")
 	methodABI := &abi.Method{
 		Name:   "echoTypes2",
 		Inputs: []abi.Argument{},
@@ -1768,7 +1768,7 @@ func TestProcessRLPBytesUnpackFailure(t *testing.T) {
 func TestProcessOutputsTooFew(t *testing.T) {
 	assert := assert.New(t)
 
-	t1, _ := besudbind.ABITypeFor("string")
+	t1, _ := turbokeeperdbind.ABITypeFor("string")
 	methodABI := &abi.Method{
 		Name:   "echoTypes2",
 		Inputs: []abi.Argument{},
@@ -1797,7 +1797,7 @@ func TestProcessOutputsTooMany(t *testing.T) {
 func TestProcessOutputsDefaultName(t *testing.T) {
 	assert := assert.New(t)
 
-	t1, _ := besudbind.ABITypeFor("string")
+	t1, _ := turbokeeperdbind.ABITypeFor("string")
 	methodABI := &abi.Method{
 		Name:   "anonReturn",
 		Inputs: []abi.Argument{},
@@ -1816,7 +1816,7 @@ func TestProcessOutputsDefaultName(t *testing.T) {
 func TestProcessOutputsBadArgs(t *testing.T) {
 	assert := assert.New(t)
 
-	t1, _ := besudbind.ABITypeFor("int32[]")
+	t1, _ := turbokeeperdbind.ABITypeFor("int32[]")
 	methodABI := &abi.Method{
 		Name:   "echoTypes2",
 		Inputs: []abi.Argument{},

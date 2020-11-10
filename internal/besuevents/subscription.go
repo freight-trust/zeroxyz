@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudevents
+package turbokeeperdevents
 
 import (
 	"context"
@@ -20,58 +20,58 @@ import (
 	"strings"
 	"time"
 
-	"github.com/freight-trust/zeroxyz/internal/besudbind"
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
-	"github.com/freight-trust/zeroxyz/internal/besudeth"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
 	log "github.com/sirupsen/logrus"
 )
 
 // persistedFilter is the part of the filter we record to storage
 type persistedFilter struct {
-	Addresses []besudbind.Address `json:"address,omitempty"`
-	Topics    [][]besudbind.Hash  `json:"topics,omitempty"`
+	Addresses []turbokeeperdbind.Address `json:"address,omitempty"`
+	Topics    [][]turbokeeperdbind.Hash  `json:"topics,omitempty"`
 }
 
 // ethFilter is the filter structure we send over the wire on eth_newFilter
 type ethFilter struct {
 	persistedFilter
-	FromBlock besudbind.HexBigInt `json:"fromBlock,omitempty"`
+	FromBlock turbokeeperdbind.HexBigInt `json:"fromBlock,omitempty"`
 	ToBlock   string            `json:"toBlock,omitempty"`
 }
 
 // SubscriptionInfo is the persisted data for the subscription
 type SubscriptionInfo struct {
-	besudmessages.TimeSorted
+	turbokeeperdmessages.TimeSorted
 	ID        string                        `json:"id,omitempty"`
 	Path      string                        `json:"path"`
 	Summary   string                        `json:"-"`    // System generated name for the subscription
 	Name      string                        `json:"name"` // User provided name for the subscription, set to Summary if missing
 	Stream    string                        `json:"stream"`
 	Filter    persistedFilter               `json:"filter"`
-	Event     *besudbind.ABIElementMarshaling `json:"event"`
+	Event     *turbokeeperdbind.ABIElementMarshaling `json:"event"`
 	FromBlock string                        `json:"fromBlock,omitempty"`
 }
 
 // subscription is the runtime that manages the subscription
 type subscription struct {
 	info           *SubscriptionInfo
-	rpc            besudeth.RPCClient
+	rpc            turbokeeperdeth.RPCClient
 	lp             *logProcessor
 	logName        string
-	filterID       besudbind.HexBigInt
+	filterID       turbokeeperdbind.HexBigInt
 	filteredOnce   bool
 	filterStale    bool
 	deleting       bool
 	resetRequested bool
 }
 
-func newSubscription(sm subscriptionManager, rpc besudeth.RPCClient, addr *besudbind.Address, i *SubscriptionInfo) (*subscription, error) {
+func newSubscription(sm subscriptionManager, rpc turbokeeperdeth.RPCClient, addr *turbokeeperdbind.Address, i *SubscriptionInfo) (*subscription, error) {
 	stream, err := sm.streamByID(i.Stream)
 	if err != nil {
 		return nil, err
 	}
-	event, err := besudbind.ABIElementMarshalingToABIEvent(i.Event)
+	event, err := turbokeeperdbind.ABIElementMarshalingToABIEvent(i.Event)
 	if err != nil {
 		return nil, err
 	}
@@ -79,26 +79,26 @@ func newSubscription(sm subscriptionManager, rpc besudeth.RPCClient, addr *besud
 		info:        i,
 		rpc:         rpc,
 		lp:          newLogProcessor(i.ID, event, stream),
-		logName:     i.ID + ":" + besudbind.ABIEventSignature(event),
+		logName:     i.ID + ":" + turbokeeperdbind.ABIEventSignature(event),
 		filterStale: true,
 	}
 	f := &i.Filter
 	addrStr := "*"
 	if addr != nil {
-		f.Addresses = []besudbind.Address{*addr}
+		f.Addresses = []turbokeeperdbind.Address{*addr}
 		addrStr = addr.String()
 	}
-	i.Summary = addrStr + ":" + besudbind.ABIEventSignature(event)
+	i.Summary = addrStr + ":" + turbokeeperdbind.ABIEventSignature(event)
 	// If a name was not provided by the end user, set it to the system generated summary
 	if i.Name == "" {
 		log.Debugf("No name provided for subscription, using auto-generated summary:%s", i.Summary)
 		i.Name = i.Summary
 	}
 	if event == nil || event.Name == "" {
-		return nil, besuderrors.Errorf(besuderrors.EventStreamsSubscribeNoEvent)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsSubscribeNoEvent)
 	}
 	// For now we only support filtering on the event type
-	f.Topics = [][]besudbind.Hash{{event.ID}}
+	f.Topics = [][]turbokeeperdbind.Hash{{event.ID}}
 	log.Infof("Created subscription ID:%s name:%s topic:%s", i.ID, i.Name, event.ID)
 	return s, nil
 }
@@ -108,15 +108,15 @@ func (info *SubscriptionInfo) GetID() string {
 	return info.ID
 }
 
-func restoreSubscription(sm subscriptionManager, rpc besudeth.RPCClient, i *SubscriptionInfo) (*subscription, error) {
+func restoreSubscription(sm subscriptionManager, rpc turbokeeperdeth.RPCClient, i *SubscriptionInfo) (*subscription, error) {
 	if i.GetID() == "" {
-		return nil, besuderrors.Errorf(besuderrors.EventStreamsNoID)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsNoID)
 	}
 	stream, err := sm.streamByID(i.Stream)
 	if err != nil {
 		return nil, err
 	}
-	event, err := besudbind.ABIElementMarshalingToABIEvent(i.Event)
+	event, err := turbokeeperdbind.ABIElementMarshalingToABIEvent(i.Event)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func restoreSubscription(sm subscriptionManager, rpc besudeth.RPCClient, i *Subs
 		rpc:         rpc,
 		info:        i,
 		lp:          newLogProcessor(i.ID, event, stream),
-		logName:     i.ID + ":" + besudbind.ABIEventSignature(event),
+		logName:     i.ID + ":" + turbokeeperdbind.ABIEventSignature(event),
 		filterStale: true,
 	}
 	return s, nil
@@ -134,16 +134,16 @@ func (s *subscription) setInitialBlockHeight(ctx context.Context) (*big.Int, err
 	if s.info.FromBlock != "" && s.info.FromBlock != FromBlockLatest {
 		var i big.Int
 		if _, ok := i.SetString(s.info.FromBlock, 10); !ok {
-			return nil, besuderrors.Errorf(besuderrors.EventStreamsSubscribeBadBlock)
+			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsSubscribeBadBlock)
 		}
 		return &i, nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	blockHeight := besudbind.HexBigInt{}
+	blockHeight := turbokeeperdbind.HexBigInt{}
 	err := s.rpc.CallContext(ctx, &blockHeight, "eth_blockNumber")
 	if err != nil {
-		return nil, besuderrors.Errorf(besuderrors.RPCCallReturnedError, "eth_blockNumber", err)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.RPCCallReturnedError, "eth_blockNumber", err)
 	}
 	i := blockHeight.ToInt()
 	s.lp.initBlockHWM(i)
@@ -165,7 +165,7 @@ func (s *subscription) restartFilter(ctx context.Context, since *big.Int) error 
 	defer cancel()
 	err := s.rpc.CallContext(ctx, &s.filterID, "eth_newFilter", f)
 	if err != nil {
-		return besuderrors.Errorf(besuderrors.RPCCallReturnedError, "eth_newFilter", err)
+		return turbokeeperderrors.Errorf(turbokeeperderrors.RPCCallReturnedError, "eth_newFilter", err)
 	}
 	s.filteredOnce = false
 	s.filterStale = false
@@ -190,7 +190,7 @@ func (s *subscription) getEventTimestamp(ctx context.Context, l *logEntry) {
 	// we didn't find the timestamp in our cache, query the node for the block header where we can find the timestamp
 	rpcMethod := "eth_getBlockByNumber"
 
-	var hdr besudbind.Header
+	var hdr turbokeeperdbind.Header
 	// 2nd parameter (false) indicates it is sufficient to retrieve only hashes of tx objects
 	if err := s.rpc.CallContext(ctx, &hdr, rpcMethod, blockNumber, false); err != nil {
 		log.Errorf("Unable to retrieve block[%s] timestamp: %s", blockNumber, err)

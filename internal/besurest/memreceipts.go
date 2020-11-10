@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudrest
+package turbokeeperdrest
 
 import (
 	"container/list"
 	"sync"
 
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -42,7 +42,7 @@ func (m *memoryReceipts) GetReceipts(skip, limit int, ids []string, sinceEpochMS
 	defer m.mux.Unlock()
 
 	if len(ids) > 0 || sinceEpochMS != 0 || from != "" || to != "" {
-		return nil, besuderrors.Errorf(besuderrors.KVStoreMemFilteringUnsupported)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.KVStoreMemFilteringUnsupported)
 	}
 
 	results := make([]map[string]interface{}, 0, limit)

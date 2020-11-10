@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudcontracts
+package turbokeeperdcontracts
 
 import (
 	"context"
@@ -20,19 +20,19 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
-	"github.com/freight-trust/zeroxyz/internal/besudtx"
-	"github.com/freight-trust/zeroxyz/internal/besudutils"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdtx"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type syncDispatcher struct {
-	processor besudtx.TxnProcessor
+	processor turbokeeperdtx.TxnProcessor
 }
 
-func newSyncDispatcher(processor besudtx.TxnProcessor) rest2EthSyncDispatcher {
+func newSyncDispatcher(processor turbokeeperdtx.TxnProcessor) rest2EthSyncDispatcher {
 	return &syncDispatcher{
 		processor: processor,
 	}
@@ -43,15 +43,15 @@ type syncTxInflight struct {
 	d              *syncDispatcher
 	replyProcessor rest2EthReplyProcessor
 	timeReceived   time.Time
-	sendMsg        *besudmessages.SendTransaction
-	deployMsg      *besudmessages.DeployContract
+	sendMsg        *turbokeeperdmessages.SendTransaction
+	deployMsg      *turbokeeperdmessages.DeployContract
 }
 
 func (t *syncTxInflight) Context() context.Context {
 	return t.ctx
 }
 
-func (t *syncTxInflight) Headers() *besudmessages.CommonHeaders {
+func (t *syncTxInflight) Headers() *turbokeeperdmessages.CommonHeaders {
 	if t.deployMsg != nil {
 		return &t.deployMsg.Headers.CommonHeaders
 	}
@@ -67,7 +67,7 @@ func (t *syncTxInflight) Unmarshal(msg interface{}) error {
 	}
 	if reflect.TypeOf(msg) != reflect.TypeOf(retMsg) {
 		log.Errorf("Type mismatch: %s != %s", reflect.TypeOf(msg), reflect.TypeOf(retMsg))
-		return besuderrors.Errorf(besuderrors.RESTGatewaySyncMsgTypeMismatch)
+		return turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewaySyncMsgTypeMismatch)
 	}
 	reflect.ValueOf(msg).Elem().Set(reflect.ValueOf(retMsg).Elem())
 	return nil
@@ -82,13 +82,13 @@ func (t *syncTxInflight) SendErrorReplyWithGapFill(status int, err error, gapFil
 }
 
 func (t *syncTxInflight) SendErrorReplyWithTX(status int, err error, txHash string) {
-	t.SendErrorReply(status, besuderrors.Errorf(besuderrors.RESTGatewaySyncWrapErrorWithTXDetail, txHash, err))
+	t.SendErrorReply(status, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewaySyncWrapErrorWithTXDetail, txHash, err))
 }
 
-func (t *syncTxInflight) Reply(replyMessage besudmessages.ReplyWithHeaders) {
+func (t *syncTxInflight) Reply(replyMessage turbokeeperdmessages.ReplyWithHeaders) {
 	headers := t.Headers()
 	replyHeaders := replyMessage.ReplyHeaders()
-	replyHeaders.ID = besudutils.UUIDv4()
+	replyHeaders.ID = turbokeeperdutils.UUIDv4()
 	replyHeaders.Context = headers.Context
 	replyHeaders.ReqID = headers.ID
 	replyHeaders.Received = t.timeReceived.UTC().Format(time.RFC3339Nano)
@@ -102,7 +102,7 @@ func (t *syncTxInflight) String() string {
 	return fmt.Sprintf("MsgContext[%s/%s]", headers.MsgType, headers.ID)
 }
 
-func (d *syncDispatcher) DispatchSendTransactionSync(ctx context.Context, msg *besudmessages.SendTransaction, replyProcessor rest2EthReplyProcessor) {
+func (d *syncDispatcher) DispatchSendTransactionSync(ctx context.Context, msg *turbokeeperdmessages.SendTransaction, replyProcessor rest2EthReplyProcessor) {
 	syncCtx := &syncTxInflight{
 		replyProcessor: replyProcessor,
 		timeReceived:   time.Now().UTC(),
@@ -112,7 +112,7 @@ func (d *syncDispatcher) DispatchSendTransactionSync(ctx context.Context, msg *b
 	d.processor.OnMessage(syncCtx)
 }
 
-func (d *syncDispatcher) DispatchDeployContractSync(ctx context.Context, msg *besudmessages.DeployContract, replyProcessor rest2EthReplyProcessor) {
+func (d *syncDispatcher) DispatchDeployContractSync(ctx context.Context, msg *turbokeeperdmessages.DeployContract, replyProcessor rest2EthReplyProcessor) {
 	syncCtx := &syncTxInflight{
 		replyProcessor: replyProcessor,
 		timeReceived:   time.Now().UTC(),

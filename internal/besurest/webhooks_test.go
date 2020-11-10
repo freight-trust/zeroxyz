@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudrest
+package turbokeeperdrest
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,9 +39,9 @@ type mockContractGW struct {
 	postDeployErr error
 }
 
-func (m *mockContractGW) PreDeploy(*besudmessages.DeployContract) error { return m.preDeployErr }
+func (m *mockContractGW) PreDeploy(*turbokeeperdmessages.DeployContract) error { return m.preDeployErr }
 
-func (m *mockContractGW) PostDeploy(*besudmessages.TransactionReceipt) error { return m.postDeployErr }
+func (m *mockContractGW) PostDeploy(*turbokeeperdmessages.TransactionReceipt) error { return m.postDeployErr }
 
 func (m *mockContractGW) AddRoutes(*httprouter.Router) {}
 
@@ -74,12 +74,12 @@ func TestWebhookHandlerBadRequest(t *testing.T) {
 func TestWebhookHandlerContractGWSuccess(t *testing.T) {
 	assert := assert.New(t)
 
-	deployMsg := besudmessages.DeployContract{
-		TransactionCommon: besudmessages.TransactionCommon{
-			RequestCommon: besudmessages.RequestCommon{
-				Headers: besudmessages.RequestHeaders{
-					CommonHeaders: besudmessages.CommonHeaders{
-						MsgType: besudmessages.MsgTypeDeployContract,
+	deployMsg := turbokeeperdmessages.DeployContract{
+		TransactionCommon: turbokeeperdmessages.TransactionCommon{
+			RequestCommon: turbokeeperdmessages.RequestCommon{
+				Headers: turbokeeperdmessages.RequestHeaders{
+					CommonHeaders: turbokeeperdmessages.CommonHeaders{
+						MsgType: turbokeeperdmessages.MsgTypeDeployContract,
 					},
 				},
 			},
@@ -99,12 +99,12 @@ func TestWebhookHandlerContractGWSuccess(t *testing.T) {
 func TestWebhookHandlerContractGWFail(t *testing.T) {
 	assert := assert.New(t)
 
-	deployMsg := besudmessages.DeployContract{
-		TransactionCommon: besudmessages.TransactionCommon{
-			RequestCommon: besudmessages.RequestCommon{
-				Headers: besudmessages.RequestHeaders{
-					CommonHeaders: besudmessages.CommonHeaders{
-						MsgType: besudmessages.MsgTypeDeployContract,
+	deployMsg := turbokeeperdmessages.DeployContract{
+		TransactionCommon: turbokeeperdmessages.TransactionCommon{
+			RequestCommon: turbokeeperdmessages.RequestCommon{
+				Headers: turbokeeperdmessages.RequestHeaders{
+					CommonHeaders: turbokeeperdmessages.CommonHeaders{
+						MsgType: turbokeeperdmessages.MsgTypeDeployContract,
 					},
 				},
 			},

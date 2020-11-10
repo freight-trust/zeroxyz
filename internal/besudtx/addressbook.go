@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudtx
+package turbokeeperdtx
 
 import (
 	"context"
@@ -21,9 +21,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
-	"github.com/freight-trust/zeroxyz/internal/besudeth"
-	"github.com/freight-trust/zeroxyz/internal/besudutils"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,12 +34,12 @@ const (
 // AddressBook looks up RPC URLs based on a remote registry, and optionally
 // resolves hostnames to IP addresses using a hosts file
 type AddressBook interface {
-	lookup(ctx context.Context, addr string) (besudeth.RPCClient, error)
+	lookup(ctx context.Context, addr string) (turbokeeperdeth.RPCClient, error)
 }
 
 // AddressBookConf configuration
 type AddressBookConf struct {
-	besudutils.HTTPRequesterConf
+	turbokeeperdutils.HTTPRequesterConf
 	AddressbookURLPrefix string                   `json:"urlPrefix"`
 	HostsFile            string                   `json:"hostsFile"`
 	PropNames            AddressBookPropNamesConf `json:"propNames"`
@@ -51,13 +51,13 @@ type AddressBookPropNamesConf struct {
 }
 
 // NewAddressBook construtor
-func NewAddressBook(conf *AddressBookConf, rpcConf *besudeth.RPCConf) AddressBook {
+func NewAddressBook(conf *AddressBookConf, rpcConf *turbokeeperdeth.RPCConf) AddressBook {
 	ab := &addressBook{
 		conf:                conf,
 		fallbackRPCEndpoint: rpcConf.RPC.URL,
-		hr:                  besudutils.NewHTTPRequester("Addressbook", &conf.HTTPRequesterConf),
+		hr:                  turbokeeperdutils.NewHTTPRequester("Addressbook", &conf.HTTPRequesterConf),
 		addrToHost:          make(map[string]string),
-		hostToRPC:           make(map[string]besudeth.RPCClientAll),
+		hostToRPC:           make(map[string]turbokeeperdeth.RPCClientAll),
 	}
 	propNames := &conf.PropNames
 	if propNames.RPCEndpoint == "" {
@@ -71,15 +71,15 @@ func NewAddressBook(conf *AddressBookConf, rpcConf *besudeth.RPCConf) AddressBoo
 
 type addressBook struct {
 	conf                *AddressBookConf
-	hr                  *besudutils.HTTPRequester
+	hr                  *turbokeeperdutils.HTTPRequester
 	mtx                 sync.Mutex
 	fallbackRPCEndpoint string
 	addrToHost          map[string]string
-	hostToRPC           map[string]besudeth.RPCClientAll
+	hostToRPC           map[string]turbokeeperdeth.RPCClientAll
 }
 
 // testRPC uses a simple net_version JSON/RPC call to test the health of a cached connection
-func (ab *addressBook) testRPC(ctx context.Context, rpc besudeth.RPCClient) bool {
+func (ab *addressBook) testRPC(ctx context.Context, rpc turbokeeperdeth.RPCClient) bool {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -96,14 +96,14 @@ func (ab *addressBook) resolveHost(endpoint string) (*url.URL, error) {
 	url, err := url.Parse(endpoint)
 	if err != nil {
 		log.Errorf("Invalid URL '%s': %s", endpoint, err)
-		return nil, besuderrors.Errorf(besuderrors.AddressBookLookupBadURL)
+		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.AddressBookLookupBadURL)
 	}
 
 	if ab.conf.HostsFile != "" {
-		hostsMap, err := besudutils.ParseHosts(ab.conf.HostsFile)
+		hostsMap, err := turbokeeperdutils.ParseHosts(ab.conf.HostsFile)
 		if err != nil {
 			log.Errorf("Failed to parse hosts file: %s", err)
-			return nil, besuderrors.Errorf(besuderrors.AddressBookLookupBadHostsFile)
+			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.AddressBookLookupBadHostsFile)
 		}
 		splitHostPort := strings.Split(url.Host, ":")
 		if mappedHost, ok := hostsMap[splitHostPort[0]]; ok && mappedHost != "" {
@@ -119,7 +119,7 @@ func (ab *addressBook) resolveHost(endpoint string) (*url.URL, error) {
 
 // mapEndpoint takes an RPC connect endpoint (prior to host resolution) and maps
 // it to a cached RPC connection. Or creates a new connection and caches it.
-func (ab *addressBook) mapEndpoint(ctx context.Context, endpoint string) (besudeth.RPCClient, error) {
+func (ab *addressBook) mapEndpoint(ctx context.Context, endpoint string) (turbokeeperdeth.RPCClient, error) {
 
 	// Simple locking on our cache for now (covers long-lived async test+connect operations)
 	ab.mtx.Lock()
@@ -143,7 +143,7 @@ func (ab *addressBook) mapEndpoint(ctx context.Context, endpoint string) (besude
 	}
 
 	// Connect and cache the RPC connection
-	if rpc, err = besudeth.RPCConnect(&besudeth.RPCConnOpts{
+	if rpc, err = turbokeeperdeth.RPCConnect(&turbokeeperdeth.RPCConnOpts{
 		URL: url.String(),
 	}); err != nil {
 		return nil, err
@@ -154,7 +154,7 @@ func (ab *addressBook) mapEndpoint(ctx context.Context, endpoint string) (besude
 
 // lookup the RPC URL to use for a given from address, performing hostname resolution
 // based on a custom hosts file (if configured)
-func (ab *addressBook) lookup(ctx context.Context, fromAddr string) (besudeth.RPCClient, error) {
+func (ab *addressBook) lookup(ctx context.Context, fromAddr string) (turbokeeperdeth.RPCClient, error) {
 	// First check if we already know the base (non host translated) endpoint
 	// to use for this address
 	log.Infof("Resolving signing address: %s", fromAddr)
@@ -167,7 +167,7 @@ func (ab *addressBook) lookup(ctx context.Context, fromAddr string) (besudeth.RP
 		}
 		if body == nil {
 			if ab.fallbackRPCEndpoint == "" {
-				return nil, besuderrors.Errorf(besuderrors.AddressBookLookupNotFound)
+				return nil, turbokeeperderrors.Errorf(turbokeeperderrors.AddressBookLookupNotFound)
 			}
 			endpoint = ab.fallbackRPCEndpoint
 		} else {

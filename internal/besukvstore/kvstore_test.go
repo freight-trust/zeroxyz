@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudkvstore
+package turbokeeperdkvstore
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ import (
 )
 
 func tempdir(t *testing.T) string {
-	dir, _ := ioutil.TempDir("", "besud")
+	dir, _ := ioutil.TempDir("", "turbokeeperd")
 	t.Logf("tmpdir/create: %s", dir)
 	return dir
 }

@@ -7,6 +7,6 @@ coverage:
       default:
         threshold: 0.1%
   ignore:
-  - "internal/besukafka/mock_sarama" # Generated mock
-  - "internal/besuauth/besuauthtest" # Mock
+  - "internal/turbokeeperkafka/mock_sarama" # Generated mock
+  - "internal/turbokeeperauth/turbokeeperauthtest" # Mock
   - "cmd/plugins.go" # Not testable with UTs

@@ -17,9 +17,9 @@ package cmd
 import (
 	"plugin"
 
-	"github.com/freight-trust/zeroxyz/internal/besuauth"
-	"github.com/freight-trust/zeroxyz/internal/besuerrors"
-	"github.com/freight-trust/zeroxyz/pkg/besuplugins"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperauth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeepererrors"
+	"github.com/freight-trust/zeroxyz/pkg/turbokeeperplugins"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,14 +45,14 @@ func loadSecurityModulePlugin(conf *PluginConfig) error {
 	log.Debugf("Loading SecurityModule plugin '%s'", modulePath)
 	smPlugin, err := plugin.Open(modulePath)
 	if err != nil {
-		return besuerrors.Errorf(besuerrors.SecurityModulePluginLoad, err)
+		return turbokeepererrors.Errorf(turbokeepererrors.SecurityModulePluginLoad, err)
 	}
 
 	smSymbol, err := smPlugin.Lookup("SecurityModule")
 	if err != nil || smSymbol == nil {
-		return besuerrors.Errorf(besuerrors.SecurityModulePluginSymbol, modulePath, err)
+		return turbokeepererrors.Errorf(turbokeepererrors.SecurityModulePluginSymbol, modulePath, err)
 	}
 
-	besuauth.RegisterSecurityModule(*smSymbol.(*besuplugins.SecurityModule))
+	turbokeeperauth.RegisterSecurityModule(*smSymbol.(*turbokeeperplugins.SecurityModule))
 	return nil
 }

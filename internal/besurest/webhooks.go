@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudrest
+package turbokeeperdrest
 
 import (
 	"context"
@@ -21,10 +21,10 @@ import (
 	"reflect"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/besudcontracts"
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
-	"github.com/freight-trust/zeroxyz/internal/besudutils"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdcontracts"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -36,11 +36,11 @@ type webhooksHandler interface {
 
 // webhooks provides the async HTTP to eth TX bridge
 type webhooks struct {
-	smartContractGW besudcontracts.SmartContractGateway
+	smartContractGW turbokeeperdcontracts.SmartContractGateway
 	handler         webhooksHandler
 }
 
-func newWebhooks(handler webhooksHandler, smartContractGW besudcontracts.SmartContractGateway) *webhooks {
+func newWebhooks(handler webhooksHandler, smartContractGW turbokeeperdcontracts.SmartContractGateway) *webhooks {
 	return &webhooks{
 		handler:         handler,
 		smartContractGW: smartContractGW,
@@ -61,7 +61,7 @@ func (w *webhooks) hookErrReply(res http.ResponseWriter, req *http.Request, err 
 	return
 }
 
-func (w *webhooks) msgSentReply(res http.ResponseWriter, req *http.Request, replyMsg *besudmessages.AsyncSentMsg) {
+func (w *webhooks) msgSentReply(res http.ResponseWriter, req *http.Request, replyMsg *turbokeeperdmessages.AsyncSentMsg) {
 	reply, _ := json.Marshal(replyMsg)
 	status := 200
 	log.Infof("<-- %s %s [%d]: Webhook RequestID=%s", req.Method, req.URL, status, replyMsg.Request)
@@ -88,7 +88,7 @@ func (w *webhooks) webhookHandlerNoAck(res http.ResponseWriter, req *http.Reques
 func (w *webhooks) webhookHandler(res http.ResponseWriter, req *http.Request, ack bool) {
 	log.Infof("--> %s %s", req.Method, req.URL)
 
-	msg, err := besudutils.YAMLorJSONPayload(req)
+	msg, err := turbokeeperdutils.YAMLorJSONPayload(req)
 	if err != nil {
 		w.hookErrReply(res, req, err, 400)
 		return
@@ -102,35 +102,35 @@ func (w *webhooks) webhookHandler(res http.ResponseWriter, req *http.Request, ac
 	w.msgSentReply(res, req, reply)
 }
 
-func (w *webhooks) processMsg(ctx context.Context, msg map[string]interface{}, ack bool) (*besudmessages.AsyncSentMsg, int, error) {
+func (w *webhooks) processMsg(ctx context.Context, msg map[string]interface{}, ack bool) (*turbokeeperdmessages.AsyncSentMsg, int, error) {
 	// Check we understand the type, and can get the key.
 	// The rest of the validation is performed by the bridge listening to Kafka
 	headers, exists := msg["headers"]
 	if !exists || reflect.TypeOf(headers).Kind() != reflect.Map {
-		return nil, 400, besuderrors.Errorf(besuderrors.WebhooksInvalidMsgHeaders)
+		return nil, 400, turbokeeperderrors.Errorf(turbokeeperderrors.WebhooksInvalidMsgHeaders)
 	}
 	msgType, exists := headers.(map[string]interface{})["type"]
 	if !exists || reflect.TypeOf(msgType).Kind() != reflect.String {
-		return nil, 400, besuderrors.Errorf(besuderrors.WebhooksInvalidMsgTypeMissing)
+		return nil, 400, turbokeeperderrors.Errorf(turbokeeperderrors.WebhooksInvalidMsgTypeMissing)
 	}
 	var key string
 	switch msgType {
-	case besudmessages.MsgTypeDeployContract, besudmessages.MsgTypeSendTransaction:
+	case turbokeeperdmessages.MsgTypeDeployContract, turbokeeperdmessages.MsgTypeSendTransaction:
 		from, exists := msg["from"]
 		if !exists || reflect.TypeOf(from).Kind() != reflect.String {
-			return nil, 400, besuderrors.Errorf(besuderrors.WebhooksInvalidMsgFromMissing)
+			return nil, 400, turbokeeperderrors.Errorf(turbokeeperderrors.WebhooksInvalidMsgFromMissing)
 		}
 		key = from.(string)
 		break
 	default:
-		return nil, 400, besuderrors.Errorf(besuderrors.WebhooksInvalidMsgType, msgType)
+		return nil, 400, turbokeeperderrors.Errorf(turbokeeperderrors.WebhooksInvalidMsgType, msgType)
 	}
 
 	// We always generate the ID. It cannot be set by the user
-	msgID := besudutils.UUIDv4()
+	msgID := turbokeeperdutils.UUIDv4()
 	headers.(map[string]interface{})["id"] = msgID
 
-	if w.smartContractGW != nil && msgType == besudmessages.MsgTypeDeployContract {
+	if w.smartContractGW != nil && msgType == turbokeeperdmessages.MsgTypeDeployContract {
 		var err error
 		if msg, err = w.contractGWHandler(msg); err != nil {
 			return nil, 500, err
@@ -143,7 +143,7 @@ func (w *webhooks) processMsg(ctx context.Context, msg map[string]interface{}, a
 	if err != nil {
 		return nil, status, err
 	}
-	return &besudmessages.AsyncSentMsg{
+	return &turbokeeperdmessages.AsyncSentMsg{
 		Sent:    true,
 		Request: msgID,
 		Msg:     msgAck,
@@ -154,7 +154,7 @@ func (w *webhooks) contractGWHandler(msg map[string]interface{}) (map[string]int
 	// We have to fully parse, then re-serialize, the message in the case of a contract deployment
 	// where we are performing OpenAPI gateway processing
 	msgBytes, _ := json.Marshal(&msg)
-	var deployMsg besudmessages.DeployContract
+	var deployMsg turbokeeperdmessages.DeployContract
 	if err := json.Unmarshal(msgBytes, &deployMsg); err != nil {
 		return nil, err
 	}

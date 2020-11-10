@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudopenapi
+package turbokeeperdopenapi
 
 import (
 	"net/url"
@@ -40,7 +40,7 @@ type ABI2Swagger struct {
 }
 
 const (
-	besuNodeCredential   = "BesuNodeCredential"
+	turbokeeperNodeCredential   = "BesuNodeCredential"
 	inputSchemaNameSuffix  = "_inputs"
 	outputSchemaNameSuffix = "_outputs"
 )
@@ -98,7 +98,7 @@ func (c *ABI2Swagger) convert(basePath, name string, abi *abi.ABI, devdocsJSON s
 	}
 	if c.conf.BasicAuth {
 		swagger.SwaggerProps.SecurityDefinitions = map[string]*spec.SecurityScheme{
-			besuNodeCredential: {
+			turbokeeperNodeCredential: {
 				SecuritySchemeProps: spec.SecuritySchemeProps{
 					Type: "basic",
 				},
@@ -252,8 +252,8 @@ func (c *ABI2Swagger) getCommonParameters() map[string]spec.Parameter {
 	params := make(map[string]spec.Parameter)
 	params["fromParam"] = spec.Parameter{
 		ParamProps: spec.ParamProps{
-			Description: "The 'from' address (header: x-besu-from)",
-			Name:        "besud-from",
+			Description: "The 'from' address (header: x-turbokeeper-from)",
+			Name:        "turbokeeperd-from",
 			In:          "query",
 			Required:    false,
 		},
@@ -263,8 +263,8 @@ func (c *ABI2Swagger) getCommonParameters() map[string]spec.Parameter {
 	}
 	params["valueParam"] = spec.Parameter{
 		ParamProps: spec.ParamProps{
-			Description:     "Ether value to send with the transaction (header: x-besu-ethvalue)",
-			Name:            "besud-ethvalue",
+			Description:     "Ether value to send with the transaction (header: x-turbokeeper-ethvalue)",
+			Name:            "turbokeeperd-ethvalue",
 			In:              "query",
 			Required:        false,
 			AllowEmptyValue: true,
@@ -275,8 +275,8 @@ func (c *ABI2Swagger) getCommonParameters() map[string]spec.Parameter {
 	}
 	params["gasParam"] = spec.Parameter{
 		ParamProps: spec.ParamProps{
-			Description:     "Gas to send with the transaction (auto-calculated if not set) (header: x-besu-gas)",
-			Name:            "besud-gas",
+			Description:     "Gas to send with the transaction (auto-calculated if not set) (header: x-turbokeeper-gas)",
+			Name:            "turbokeeperd-gas",
 			In:              "query",
 			Required:        false,
 			AllowEmptyValue: true,
@@ -287,8 +287,8 @@ func (c *ABI2Swagger) getCommonParameters() map[string]spec.Parameter {
 	}
 	params["gaspriceParam"] = spec.Parameter{
 		ParamProps: spec.ParamProps{
-			Description:     "Gas Price offered (header: x-besu-gasprice)",
-			Name:            "besud-gasprice",
+			Description:     "Gas Price offered (header: x-turbokeeper-gasprice)",
+			Name:            "turbokeeperd-gasprice",
 			In:              "query",
 			Required:        false,
 			AllowEmptyValue: true,
@@ -299,8 +299,8 @@ func (c *ABI2Swagger) getCommonParameters() map[string]spec.Parameter {
 	}
 	params["syncParam"] = spec.Parameter{
 		ParamProps: spec.ParamProps{
-			Description:     "Block the HTTP request until the tx is mined (does not store the receipt) (header: x-besu-sync)",
-			Name:            "besud-sync",
+			Description:     "Block the HTTP request until the tx is mined (does not store the receipt) (header: x-turbokeeper-sync)",
+			Name:            "turbokeeperd-sync",
 			In:              "query",
 			Required:        false,
 			AllowEmptyValue: true,
@@ -312,8 +312,8 @@ func (c *ABI2Swagger) getCommonParameters() map[string]spec.Parameter {
 	}
 	params["callParam"] = spec.Parameter{
 		ParamProps: spec.ParamProps{
-			Description:     "Perform a read-only call with the same parameters that would be used to invoke, and return result (header: x-besu-call)",
-			Name:            "besud-call",
+			Description:     "Perform a read-only call with the same parameters that would be used to invoke, and return result (header: x-turbokeeper-call)",
+			Name:            "turbokeeperd-call",
 			In:              "query",
 			Required:        false,
 			AllowEmptyValue: true,
@@ -324,8 +324,8 @@ func (c *ABI2Swagger) getCommonParameters() map[string]spec.Parameter {
 	}
 	params["privateFromParam"] = spec.Parameter{
 		ParamProps: spec.ParamProps{
-			Description:     "Private transaction sender (header: x-besu-privatefrom)",
-			Name:            "besud-privatefrom",
+			Description:     "Private transaction sender (header: x-turbokeeper-privatefrom)",
+			Name:            "turbokeeperd-privatefrom",
 			In:              "query",
 			Required:        false,
 			AllowEmptyValue: false,
@@ -336,8 +336,8 @@ func (c *ABI2Swagger) getCommonParameters() map[string]spec.Parameter {
 	}
 	params["privateForParam"] = spec.Parameter{
 		ParamProps: spec.ParamProps{
-			Description:     "Private transaction recipients (comma separated or multiple params) (header: x-besu-privatefor)",
-			Name:            "besud-privatefor",
+			Description:     "Private transaction recipients (comma separated or multiple params) (header: x-turbokeeper-privatefor)",
+			Name:            "turbokeeperd-privatefor",
 			In:              "query",
 			Required:        false,
 			AllowEmptyValue: false,
@@ -348,8 +348,8 @@ func (c *ABI2Swagger) getCommonParameters() map[string]spec.Parameter {
 	}
 	params["privacyGroupIdParam"] = spec.Parameter{
 		ParamProps: spec.ParamProps{
-			Description:     "Private transaction group ID (header: x-besu-privacyGroupId)",
-			Name:            "besud-privacygroupid",
+			Description:     "Private transaction group ID (header: x-turbokeeper-privacyGroupId)",
+			Name:            "turbokeeperd-privacygroupid",
 			In:              "query",
 			Required:        false,
 			AllowEmptyValue: false,
@@ -360,8 +360,8 @@ func (c *ABI2Swagger) getCommonParameters() map[string]spec.Parameter {
 	}
 	params["registerParam"] = spec.Parameter{
 		ParamProps: spec.ParamProps{
-			Description:     "Register the installed contract on a friendly path (overwrites existing) (header: x-besu-register)",
-			Name:            "besud-register",
+			Description:     "Register the installed contract on a friendly path (overwrites existing) (header: x-turbokeeper-register)",
+			Name:            "turbokeeperd-register",
 			In:              "query",
 			Required:        false,
 			AllowEmptyValue: false,
@@ -372,8 +372,8 @@ func (c *ABI2Swagger) getCommonParameters() map[string]spec.Parameter {
 	}
 	params["blocknumberParam"] = spec.Parameter{
 		ParamProps: spec.ParamProps{
-			Description:     "The target block number for eth_call requests. One of 'earliest/latest/pending', a number or a hex string (header: x-besu-blocknumber)",
-			Name:            "besud-blocknumber",
+			Description:     "The target block number for eth_call requests. One of 'earliest/latest/pending', a number or a hex string (header: x-turbokeeper-blocknumber)",
+			Name:            "turbokeeperd-blocknumber",
 			In:              "query",
 			Required:        false,
 			AllowEmptyValue: false,
@@ -388,7 +388,7 @@ func (c *ABI2Swagger) getCommonParameters() map[string]spec.Parameter {
 func (c *ABI2Swagger) addCommonParams(op *spec.Operation, isPOST bool, isConstructor bool) {
 
 	if c.conf.BasicAuth {
-		op.Security = append(op.Security, map[string][]string{besuNodeCredential: {}})
+		op.Security = append(op.Security, map[string][]string{turbokeeperNodeCredential: {}})
 	}
 
 	fromParam, _ := spec.NewRef("#/parameters/fromParam")

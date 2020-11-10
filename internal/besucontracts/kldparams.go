@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudcontracts
+package turbokeeperdcontracts
 
 import (
 	"net/http"
@@ -31,10 +31,10 @@ func getQueryParamNoCase(name string, req *http.Request) []string {
 	return nil
 }
 
-// getKLDParam standardizes how special 'besud' params are specified, in query params, or headers
+// getKLDParam standardizes how special 'turbokeeperd' params are specified, in query params, or headers
 func getKLDParam(name string, req *http.Request, isBool bool) string {
 	valStr := ""
-	vs := getQueryParamNoCase("besud-"+name, req)
+	vs := getQueryParamNoCase("turbokeeperd-"+name, req)
 	if len(vs) > 0 {
 		valStr = vs[0]
 	}
@@ -42,7 +42,7 @@ func getKLDParam(name string, req *http.Request, isBool bool) string {
 		valStr = "true"
 	}
 	if valStr == "" {
-		valStr = req.Header.Get("x-besu-" + name)
+		valStr = req.Header.Get("x-turbokeeper-" + name)
 	}
 	return valStr
 }
@@ -51,9 +51,9 @@ func getKLDParam(name string, req *http.Request, isBool bool) string {
 // allows multiple query params / headers, or a single comma-separated query param / header
 func getKLDParamMulti(name string, req *http.Request) (val []string) {
 	req.ParseForm()
-	val = getQueryParamNoCase("besud-"+name, req)
+	val = getQueryParamNoCase("turbokeeperd-"+name, req)
 	if len(val) == 0 {
-		val = textproto.MIMEHeader(req.Header)[textproto.CanonicalMIMEHeaderKey("x-besu-"+name)]
+		val = textproto.MIMEHeader(req.Header)[textproto.CanonicalMIMEHeaderKey("x-turbokeeper-"+name)]
 	}
 	if val != nil && len(val) == 1 {
 		val = strings.Split(val[0], ",")

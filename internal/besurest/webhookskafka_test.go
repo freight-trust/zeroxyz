@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudrest
+package turbokeeperdrest
 
 import (
 	"bytes"
@@ -31,10 +31,10 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/besudauth"
-	"github.com/freight-trust/zeroxyz/internal/besudauth/besudauthtest"
-	"github.com/freight-trust/zeroxyz/internal/besudkafka"
-	"github.com/freight-trust/zeroxyz/internal/besudmessages"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth/turbokeeperdauthtest"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdkafka"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -46,7 +46,7 @@ type testKafkaCommon struct {
 	startErr        error
 	cobraInitCalled bool
 	validateConfErr error
-	kafkaFactory    *besudkafka.MockKafkaFactory
+	kafkaFactory    *turbokeeperdkafka.MockKafkaFactory
 	kafkaInitDelay  int
 	startTime       time.Time
 }
@@ -77,12 +77,12 @@ func (k *testKafkaCommon) CreateTLSConfiguration() (t *tls.Config, err error) {
 	return nil, nil
 }
 
-func (k *testKafkaCommon) Conf() *besudkafka.KafkaCommonConf {
-	return &besudkafka.KafkaCommonConf{}
+func (k *testKafkaCommon) Conf() *turbokeeperdkafka.KafkaCommonConf {
+	return &turbokeeperdkafka.KafkaCommonConf{}
 }
 
-func (k *testKafkaCommon) Producer() besudkafka.KafkaProducer {
-	var producer besudkafka.KafkaProducer
+func (k *testKafkaCommon) Producer() turbokeeperdkafka.KafkaProducer {
+	var producer turbokeeperdkafka.KafkaProducer
 	timeSinceStart := time.Now().Sub(k.startTime)
 	if timeSinceStart > time.Duration(k.kafkaInitDelay)*time.Millisecond {
 		producer = k.kafkaFactory.Producer
@@ -95,7 +95,7 @@ func newTestKafkaComon() *testKafkaCommon {
 	kafka := &testKafkaCommon{}
 	kafka.startTime = time.Now().UTC()
 	kafka.stop = make(chan bool)
-	kafka.kafkaFactory = besudkafka.NewMockKafkaFactory()
+	kafka.kafkaFactory = turbokeeperdkafka.NewMockKafkaFactory()
 	kafka.kafkaFactory.NewProducer(kafka)
 	kafka.kafkaFactory.NewConsumer(kafka)
 	return kafka
@@ -112,7 +112,7 @@ func newTestWebhooks() (*webhooks, *webhooksKafka, *testKafkaCommon, *httptest.S
 	w.addRoutes(router)
 	ts := httptest.NewUnstartedServer(router)
 	ts.Config.BaseContext = func(l net.Listener) context.Context {
-		ctx, _ := besudauth.WithAuthContext(context.Background(), "testat")
+		ctx, _ := turbokeeperdauth.WithAuthContext(context.Background(), "testat")
 		return ctx
 	}
 	ts.Start()
@@ -128,7 +128,7 @@ func assertSentResp(assert *assert.Assertions, resp *http.Response, ack bool) {
 	replyBytes, err := ioutil.ReadAll(resp.Body)
 	assert.Nil(err)
 	if resp.StatusCode == 200 {
-		var replyMsg besudmessages.AsyncSentMsg
+		var replyMsg turbokeeperdmessages.AsyncSentMsg
 		err = json.Unmarshal(replyBytes, &replyMsg)
 		assert.Nil(err)
 		assert.Equal(true, replyMsg.Sent)
@@ -219,37 +219,37 @@ func sendTestTransaction(assert *assert.Assertions, msgBytes []byte, contentType
 func TestWebhookHandlerJSONSendTransaction(t *testing.T) {
 	assert := assert.New(t)
 
-	msg := besudmessages.SendTransaction{}
-	msg.Headers.MsgType = besudmessages.MsgTypeSendTransaction
+	msg := turbokeeperdmessages.SendTransaction{}
+	msg.Headers.MsgType = turbokeeperdmessages.MsgTypeSendTransaction
 	msgBytes, _ := json.Marshal(&msg)
 	resp, replyMsgs := sendTestTransaction(assert, msgBytes, "application/json", nil, true)
 	assertSentResp(assert, resp, true)
 	assert.Equal(1, len(replyMsgs))
 
-	forwardedMessage := besudmessages.SendTransaction{}
+	forwardedMessage := turbokeeperdmessages.SendTransaction{}
 	json.Unmarshal(replyMsgs[0], &forwardedMessage)
-	assert.Equal(besudmessages.MsgTypeSendTransaction, forwardedMessage.Headers.MsgType)
+	assert.Equal(turbokeeperdmessages.MsgTypeSendTransaction, forwardedMessage.Headers.MsgType)
 	assert.NotEmpty(forwardedMessage.Headers.ID)
 }
 
 func TestWebhookHandlerJSONSendnWithAccessToken(t *testing.T) {
 
-	besudauth.RegisterSecurityModule(&besudauthtest.TestSecurityModule{})
+	turbokeeperdauth.RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
 	assert := assert.New(t)
 
-	msg := besudmessages.SendTransaction{}
-	msg.Headers.MsgType = besudmessages.MsgTypeSendTransaction
+	msg := turbokeeperdmessages.SendTransaction{}
+	msg.Headers.MsgType = turbokeeperdmessages.MsgTypeSendTransaction
 	msgBytes, _ := json.Marshal(&msg)
 	resp, replyMsgs := sendTestTransaction(assert, msgBytes, "application/json", nil, true)
 	assertSentResp(assert, resp, true)
 	assert.Equal(1, len(replyMsgs))
 
-	forwardedMessage := besudmessages.SendTransaction{}
+	forwardedMessage := turbokeeperdmessages.SendTransaction{}
 	json.Unmarshal(replyMsgs[0], &forwardedMessage)
-	assert.Equal(besudmessages.MsgTypeSendTransaction, forwardedMessage.Headers.MsgType)
+	assert.Equal(turbokeeperdmessages.MsgTypeSendTransaction, forwardedMessage.Headers.MsgType)
 	assert.NotEmpty(forwardedMessage.Headers.ID)
 
-	besudauth.RegisterSecurityModule(nil)
+	turbokeeperdauth.RegisterSecurityModule(nil)
 
 }
 
@@ -257,24 +257,24 @@ func TestWebhookHandlerJSONSendTransactionNoAck(t *testing.T) {
 
 	assert := assert.New(t)
 
-	msg := besudmessages.SendTransaction{}
-	msg.Headers.MsgType = besudmessages.MsgTypeSendTransaction
+	msg := turbokeeperdmessages.SendTransaction{}
+	msg.Headers.MsgType = turbokeeperdmessages.MsgTypeSendTransaction
 	msgBytes, _ := json.Marshal(&msg)
 	resp, replyMsgs := sendTestTransaction(assert, msgBytes, "application/json", nil, false)
 	assertSentResp(assert, resp, false)
 	assert.Equal(1, len(replyMsgs))
 
-	forwardedMessage := besudmessages.SendTransaction{}
+	forwardedMessage := turbokeeperdmessages.SendTransaction{}
 	json.Unmarshal(replyMsgs[0], &forwardedMessage)
-	assert.Equal(besudmessages.MsgTypeSendTransaction, forwardedMessage.Headers.MsgType)
+	assert.Equal(turbokeeperdmessages.MsgTypeSendTransaction, forwardedMessage.Headers.MsgType)
 }
 
 func TestWebhookHandlerJSONSendFailedToKafka(t *testing.T) {
 
 	assert := assert.New(t)
 
-	msg := besudmessages.SendTransaction{}
-	msg.Headers.MsgType = besudmessages.MsgTypeSendTransaction
+	msg := turbokeeperdmessages.SendTransaction{}
+	msg.Headers.MsgType = turbokeeperdmessages.MsgTypeSendTransaction
 	msgBytes, _ := json.Marshal(&msg)
 	resp, _ := sendTestTransaction(assert, msgBytes, "application/json", fmt.Errorf("pop"), true)
 	assertErrResp(assert, resp, 502, "Failed to deliver message to Kafka.*pop")
@@ -284,17 +284,17 @@ func TestWebhookHandlerJSONSendFailedToKafkaNoAck(t *testing.T) {
 
 	assert := assert.New(t)
 
-	msg := besudmessages.SendTransaction{}
-	msg.Headers.MsgType = besudmessages.MsgTypeSendTransaction
+	msg := turbokeeperdmessages.SendTransaction{}
+	msg.Headers.MsgType = turbokeeperdmessages.MsgTypeSendTransaction
 	msgBytes, _ := json.Marshal(&msg)
 	resp, replyMsgs := sendTestTransaction(assert, msgBytes, "application/json", fmt.Errorf("pop"), false)
 	// Error is swallowed
 	assertSentResp(assert, resp, false)
 	assert.Equal(1, len(replyMsgs))
 
-	forwardedMessage := besudmessages.SendTransaction{}
+	forwardedMessage := turbokeeperdmessages.SendTransaction{}
 	json.Unmarshal(replyMsgs[0], &forwardedMessage)
-	assert.Equal(besudmessages.MsgTypeSendTransaction, forwardedMessage.Headers.MsgType)
+	assert.Equal(turbokeeperdmessages.MsgTypeSendTransaction, forwardedMessage.Headers.MsgType)
 }
 
 func TestProducerErrorLoopPanicsOnBadErrStructure(t *testing.T) {
@@ -352,17 +352,17 @@ func TestWebhookHandlerJSONDeployContract(t *testing.T) {
 
 	assert := assert.New(t)
 
-	msg := besudmessages.DeployContract{}
-	msg.Headers.MsgType = besudmessages.MsgTypeDeployContract
+	msg := turbokeeperdmessages.DeployContract{}
+	msg.Headers.MsgType = turbokeeperdmessages.MsgTypeDeployContract
 	msg.From = "any string"
 	msgBytes, _ := json.Marshal(&msg)
 	resp, replyMsgs := sendTestTransaction(assert, msgBytes, "application/json", nil, true)
 	assertSentResp(assert, resp, true)
 	assert.Equal(1, len(replyMsgs))
 
-	forwardedMessage := besudmessages.SendTransaction{}
+	forwardedMessage := turbokeeperdmessages.SendTransaction{}
 	json.Unmarshal(replyMsgs[0], &forwardedMessage)
-	assert.Equal(besudmessages.MsgTypeDeployContract, forwardedMessage.Headers.MsgType)
+	assert.Equal(turbokeeperdmessages.MsgTypeDeployContract, forwardedMessage.Headers.MsgType)
 }
 
 func TestWebhookHandlerYAMLDeployContract(t *testing.T) {
@@ -397,9 +397,9 @@ func TestWebhookHandlerYAMLDeployContract(t *testing.T) {
 	assertSentResp(assert, resp, true)
 	assert.Equal(1, len(replyMsgs))
 
-	forwardedMessage := besudmessages.SendTransaction{}
+	forwardedMessage := turbokeeperdmessages.SendTransaction{}
 	json.Unmarshal(replyMsgs[0], &forwardedMessage)
-	assert.Equal(besudmessages.MsgTypeDeployContract, forwardedMessage.Headers.MsgType)
+	assert.Equal(turbokeeperdmessages.MsgTypeDeployContract, forwardedMessage.Headers.MsgType)
 }
 
 func TestWebhookHandlerYAMLBadHeaders(t *testing.T) {
@@ -466,7 +466,7 @@ func TestWebhookHandlerBadMsgType(t *testing.T) {
 
 	assert := assert.New(t)
 
-	msg := besudmessages.RequestCommon{}
+	msg := turbokeeperdmessages.RequestCommon{}
 	msg.Headers.MsgType = "badness"
 	msgBytes, _ := json.Marshal(&msg)
 	resp, replyMsgs := sendTestTransaction(assert, msgBytes, "application/json", nil, true)
@@ -502,7 +502,7 @@ func TestConsumerMessagesLoopCallsReplyProcessorWithEmptyPayload(t *testing.T) {
 		wk.ConsumerMessagesLoop(consumer, producer, wg)
 	}()
 
-	consumer.(*besudkafka.MockKafkaConsumer).MockMessages <- &sarama.ConsumerMessage{
+	consumer.(*turbokeeperdkafka.MockKafkaConsumer).MockMessages <- &sarama.ConsumerMessage{
 		Partition: 3,
 		Offset:    12345,
 		Value:     []byte(""),
@@ -511,6 +511,6 @@ func TestConsumerMessagesLoopCallsReplyProcessorWithEmptyPayload(t *testing.T) {
 	k.stop <- true
 	wg.Wait()
 
-	assert.Equal(int64(12345), consumer.(*besudkafka.MockKafkaConsumer).OffsetsByPartition[3])
+	assert.Equal(int64(12345), consumer.(*turbokeeperdkafka.MockKafkaConsumer).OffsetsByPartition[3])
 
 }

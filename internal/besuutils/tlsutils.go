@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudutils
+package turbokeeperdutils
 
 import (
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
 
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -36,7 +36,7 @@ type TLSConfig struct {
 func CreateTLSConfiguration(tlsConfig *TLSConfig) (t *tls.Config, err error) {
 
 	if !AllOrNoneReqd(tlsConfig.ClientCertsFile, tlsConfig.ClientKeyFile) {
-		err = besuderrors.Errorf(besuderrors.ConfigTLSCertOrKey)
+		err = turbokeeperderrors.Errorf(turbokeeperderrors.ConfigTLSCertOrKey)
 		return
 	}
 

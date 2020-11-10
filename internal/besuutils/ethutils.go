@@ -12,26 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudutils
+package turbokeeperdutils
 
 import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
 )
 
 // StrToAddress is a helper to parse eth addresses with useful errors
 func StrToAddress(desc string, strAddr string) (addr common.Address, err error) {
 	if strAddr == "" {
-		err = besuderrors.Errorf(besuderrors.HelperStrToAddressRequiredField, desc)
+		err = turbokeeperderrors.Errorf(turbokeeperderrors.HelperStrToAddressRequiredField, desc)
 		return
 	}
 	if !strings.HasPrefix(strAddr, "0x") {
 		strAddr = "0x" + strAddr
 	}
 	if !common.IsHexAddress(strAddr) {
-		err = besuderrors.Errorf(besuderrors.HelperStrToAddressBadAddress, desc)
+		err = turbokeeperderrors.Errorf(turbokeeperderrors.HelperStrToAddressBadAddress, desc)
 		return
 	}
 	addr = common.HexToAddress(strAddr)

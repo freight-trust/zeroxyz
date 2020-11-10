@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudevents
+package turbokeeperdevents
 
 import (
 	"context"
@@ -26,10 +26,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/freight-trust/zeroxyz/internal/besudbind"
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
-	"github.com/freight-trust/zeroxyz/internal/besudeth"
-	"github.com/freight-trust/zeroxyz/internal/besudkvstore"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperdkvstore"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -77,7 +77,7 @@ func testEvent(subID string) *eventData {
 	}
 }
 
-func newTestStreamForBatching(spec *StreamInfo, db besudkvstore.KVStore, status ...int) (*subscriptionMGR, *eventStream, *httptest.Server, chan []*eventData) {
+func newTestStreamForBatching(spec *StreamInfo, db turbokeeperdkvstore.KVStore, status ...int) (*subscriptionMGR, *eventStream, *httptest.Server, chan []*eventData) {
 	mux := http.NewServeMux()
 	eventStream := make(chan []*eventData)
 	count := 0
@@ -380,14 +380,14 @@ func setupTestSubscription(assert *assert.Assertions, sm *subscriptionMGR, strea
 	json.Unmarshal(testDataBytes, &testData)
 	testBlockDetailBytes, err := ioutil.ReadFile("../../test/block_details.json")
 	assert.NoError(err)
-	testBlock := &besudbind.Header{}
+	testBlock := &turbokeeperdbind.Header{}
 	var parsedBlock map[string]interface{}
 	json.Unmarshal(testBlockDetailBytes, &parsedBlock)
 	ts := parsedBlock["timestamp"].(float64)
 	testBlock.Time = uint64(ts)
 
 	callCount := 0
-	rpc := besudeth.NewMockRPCClientForSync(nil, func(method string, res interface{}, args ...interface{}) {
+	rpc := turbokeeperdeth.NewMockRPCClientForSync(nil, func(method string, res interface{}, args ...interface{}) {
 		callCount++
 		if method == "eth_blockNumber" || method == "eth_newFilter" {
 		} else if method == "eth_getFilterLogs" {
@@ -398,14 +398,14 @@ func setupTestSubscription(assert *assert.Assertions, sm *subscriptionMGR, strea
 		} else if method == "eth_getFilterChanges" {
 			*(res.(*[]*logEntry)) = []*logEntry{}
 		} else if method == "eth_getBlockByNumber" {
-			*(res.(*besudbind.Header)) = *testBlock
+			*(res.(*turbokeeperdbind.Header)) = *testBlock
 		}
 	})
 	sm.rpc = rpc
 
-	event := &besudbind.ABIElementMarshaling{
+	event := &turbokeeperdbind.ABIElementMarshaling{
 		Name: "Changed",
-		Inputs: []besudbind.ABIArgumentMarshaling{
+		Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
 			{
 				Name:    "from",
 				Type:    "address",
@@ -431,7 +431,7 @@ func setupTestSubscription(assert *assert.Assertions, sm *subscriptionMGR, strea
 			},
 		},
 	}
-	addr := besudbind.HexToAddress("0x167f57a13a9c35ff92f0649d2be0e52b4f8ac3ca")
+	addr := turbokeeperdbind.HexToAddress("0x167f57a13a9c35ff92f0649d2be0e52b4f8ac3ca")
 	ctx := context.Background()
 	s, _ := sm.AddSubscription(ctx, &addr, event, stream.spec.ID, "", subscriptionName)
 	return s
@@ -442,7 +442,7 @@ func TestProcessEventsEnd2End(t *testing.T) {
 	dir := tempdir(t)
 	defer cleanup(t, dir)
 
-	db, _ := besudkvstore.NewLDBKeyValueStore(dir)
+	db, _ := turbokeeperdkvstore.NewLDBKeyValueStore(dir)
 	sm, stream, svr, eventStream := newTestStreamForBatching(
 		&StreamInfo{
 			BatchSize:  1,
@@ -491,7 +491,7 @@ func TestProcessEventsEnd2EndWithTimestamps(t *testing.T) {
 	dir := tempdir(t)
 	defer cleanup(t, dir)
 
-	db, _ := besudkvstore.NewLDBKeyValueStore(dir)
+	db, _ := turbokeeperdkvstore.NewLDBKeyValueStore(dir)
 	sm, stream, svr, eventStream := newTestStreamForBatching(
 		&StreamInfo{
 			BatchSize:  1,
@@ -543,7 +543,7 @@ func TestProcessEventsEnd2EndWithReset(t *testing.T) {
 	dir := tempdir(t)
 	defer cleanup(t, dir)
 
-	db, _ := besudkvstore.NewLDBKeyValueStore(dir)
+	db, _ := turbokeeperdkvstore.NewLDBKeyValueStore(dir)
 	sm, stream, svr, eventStream := newTestStreamForBatching(
 		&StreamInfo{
 			BatchSize:  1,
@@ -651,7 +651,7 @@ func TestCheckpointRecovery(t *testing.T) {
 	var newFilterBlock uint64
 	sub := sm.subscriptions[s.ID]
 	sub.filterStale = true
-	sub.rpc = besudeth.NewMockRPCClientForSync(nil, func(method string, res interface{}, args ...interface{}) {
+	sub.rpc = turbokeeperdeth.NewMockRPCClientForSync(nil, func(method string, res interface{}, args ...interface{}) {
 		if method == "eth_newFilter" {
 			newFilterBlock = args[0].(*ethFilter).FromBlock.ToInt().Uint64()
 			t.Logf("New filter block after checkpoint recovery: %d", newFilterBlock)
@@ -692,7 +692,7 @@ func TestWithoutCheckpointRecovery(t *testing.T) {
 	var initialEndBlock string
 	sub := sm.subscriptions[s.ID]
 	sub.filterStale = true
-	sub.rpc = besudeth.NewMockRPCClientForSync(nil, func(method string, res interface{}, args ...interface{}) {
+	sub.rpc = turbokeeperdeth.NewMockRPCClientForSync(nil, func(method string, res interface{}, args ...interface{}) {
 		if method == "eth_blockNumber" {
 		} else if method == "eth_newFilter" {
 			initialEndBlock = args[0].(*ethFilter).ToBlock
@@ -732,7 +732,7 @@ func TestMarkStaleOnError(t *testing.T) {
 	sm.subscriptions[s.ID].filterStale = false
 
 	sub := sm.subscriptions[s.ID]
-	sub.rpc = besudeth.NewMockRPCClientForSync(fmt.Errorf("filter not found"), nil)
+	sub.rpc = turbokeeperdeth.NewMockRPCClientForSync(fmt.Errorf("filter not found"), nil)
 
 	stream.resume()
 	for stream.pollerDone {
@@ -750,7 +750,7 @@ func TestStoreCheckpointLoadError(t *testing.T) {
 			ErrorHandling: ErrorHandlingBlock,
 			Webhook:       &webhookAction{},
 		}, nil, 200)
-	mockKV := besudkvstore.NewMockKV(fmt.Errorf("pop"))
+	mockKV := turbokeeperdkvstore.NewMockKV(fmt.Errorf("pop"))
 	sm.db = mockKV
 	defer close(eventStream)
 	defer svr.Close()
@@ -773,7 +773,7 @@ func TestStoreCheckpointStoreError(t *testing.T) {
 			ErrorHandling: ErrorHandlingBlock,
 			Webhook:       &webhookAction{},
 		}, nil, 200)
-	mockKV := besudkvstore.NewMockKV(nil)
+	mockKV := turbokeeperdkvstore.NewMockKV(nil)
 	mockKV.StoreErr = fmt.Errorf("pop")
 	defer close(eventStream)
 	defer svr.Close()
@@ -802,7 +802,7 @@ func TestProcessBatchEmptyArray(t *testing.T) {
 			ErrorHandling: ErrorHandlingBlock,
 			Webhook:       &webhookAction{},
 		}, nil, 200)
-	mockKV := besudkvstore.NewMockKV(nil)
+	mockKV := turbokeeperdkvstore.NewMockKV(nil)
 	mockKV.StoreErr = fmt.Errorf("pop")
 	sm.db = mockKV
 	defer close(eventStream)
@@ -822,7 +822,7 @@ func TestUpdateStream(t *testing.T) {
 	dir := tempdir(t)
 	defer cleanup(t, dir)
 
-	db, _ := besudkvstore.NewLDBKeyValueStore(dir)
+	db, _ := turbokeeperdkvstore.NewLDBKeyValueStore(dir)
 	sm, stream, svr, eventStream := newTestStreamForBatching(
 		&StreamInfo{
 			ErrorHandling: ErrorHandlingBlock,
@@ -871,7 +871,7 @@ func TestUpdateStreamMissingWebhookURL(t *testing.T) {
 	dir := tempdir(t)
 	defer cleanup(t, dir)
 
-	db, _ := besudkvstore.NewLDBKeyValueStore(dir)
+	db, _ := turbokeeperdkvstore.NewLDBKeyValueStore(dir)
 	sm, stream, svr, eventStream := newTestStreamForBatching(
 		&StreamInfo{
 			ErrorHandling: ErrorHandlingBlock,
@@ -903,7 +903,7 @@ func TestUpdateStreamMissingWebhookURL(t *testing.T) {
 		},
 	}
 	_, err := sm.UpdateStream(ctx, stream.spec.ID, updateSpec)
-	assert.EqualError(err, besuderrors.EventStreamsWebhookNoURL)
+	assert.EqualError(err, turbokeeperderrors.EventStreamsWebhookNoURL)
 	err = sm.DeleteSubscription(ctx, s.ID)
 	assert.NoError(err)
 	err = sm.DeleteStream(ctx, stream.spec.ID)
@@ -916,7 +916,7 @@ func TestUpdateStreamInvalidWebhookURL(t *testing.T) {
 	dir := tempdir(t)
 	defer cleanup(t, dir)
 
-	db, _ := besudkvstore.NewLDBKeyValueStore(dir)
+	db, _ := turbokeeperdkvstore.NewLDBKeyValueStore(dir)
 	sm, stream, svr, eventStream := newTestStreamForBatching(
 		&StreamInfo{
 			ErrorHandling: ErrorHandlingBlock,
@@ -948,7 +948,7 @@ func TestUpdateStreamInvalidWebhookURL(t *testing.T) {
 		},
 	}
 	_, err := sm.UpdateStream(ctx, stream.spec.ID, updateSpec)
-	assert.EqualError(err, besuderrors.EventStreamsWebhookInvalidURL)
+	assert.EqualError(err, turbokeeperderrors.EventStreamsWebhookInvalidURL)
 	err = sm.DeleteSubscription(ctx, s.ID)
 	assert.NoError(err)
 	err = sm.DeleteStream(ctx, stream.spec.ID)

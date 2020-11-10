@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package besudeth
+package turbokeeperdeth
 
 import (
 	"context"
 	"time"
 
-	"github.com/freight-trust/zeroxyz/internal/besuderrors"
+	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,7 +30,7 @@ func (tx *Txn) GetTXReceipt(ctx context.Context, rpc RPCClient) (bool, error) {
 	defer cancel()
 
 	if err := rpc.CallContext(ctx, &tx.Receipt, "eth_getTransactionReceipt", tx.Hash); err != nil {
-		return false, besuderrors.Errorf(besuderrors.RPCCallReturnedError, "eth_getTransactionReceipt", err)
+		return false, turbokeeperderrors.Errorf(turbokeeperderrors.RPCCallReturnedError, "eth_getTransactionReceipt", err)
 	}
 	callTime := time.Now().UTC().Sub(start)
 	isMined := tx.Receipt.BlockNumber != nil && tx.Receipt.BlockNumber.ToInt().Uint64() > 0
@@ -39,7 +39,7 @@ func (tx *Txn) GetTXReceipt(ctx context.Context, rpc RPCClient) (bool, error) {
 	if tx.PrivacyGroupID != "" {
 		// priv_getTransactionReceipt expects the txHash and the public key of enclave (privateFrom)
 		if err := rpc.CallContext(ctx, &tx.Receipt, "priv_getTransactionReceipt", tx.Hash, tx.PrivateFrom); err != nil {
-			return false, besuderrors.Errorf(besuderrors.RPCCallReturnedError, "priv_getTransactionReceipt", err)
+			return false, turbokeeperderrors.Errorf(turbokeeperderrors.RPCCallReturnedError, "priv_getTransactionReceipt", err)
 		}
 	}
 
