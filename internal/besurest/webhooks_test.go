@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdrest
+package maidenlanedrest
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,9 +39,9 @@ type mockContractGW struct {
 	postDeployErr error
 }
 
-func (m *mockContractGW) PreDeploy(*turbokeeperdmessages.DeployContract) error { return m.preDeployErr }
+func (m *mockContractGW) PreDeploy(*maidenlanedmessages.DeployContract) error { return m.preDeployErr }
 
-func (m *mockContractGW) PostDeploy(*turbokeeperdmessages.TransactionReceipt) error { return m.postDeployErr }
+func (m *mockContractGW) PostDeploy(*maidenlanedmessages.TransactionReceipt) error { return m.postDeployErr }
 
 func (m *mockContractGW) AddRoutes(*httprouter.Router) {}
 
@@ -74,12 +74,12 @@ func TestWebhookHandlerBadRequest(t *testing.T) {
 func TestWebhookHandlerContractGWSuccess(t *testing.T) {
 	assert := assert.New(t)
 
-	deployMsg := turbokeeperdmessages.DeployContract{
-		TransactionCommon: turbokeeperdmessages.TransactionCommon{
-			RequestCommon: turbokeeperdmessages.RequestCommon{
-				Headers: turbokeeperdmessages.RequestHeaders{
-					CommonHeaders: turbokeeperdmessages.CommonHeaders{
-						MsgType: turbokeeperdmessages.MsgTypeDeployContract,
+	deployMsg := maidenlanedmessages.DeployContract{
+		TransactionCommon: maidenlanedmessages.TransactionCommon{
+			RequestCommon: maidenlanedmessages.RequestCommon{
+				Headers: maidenlanedmessages.RequestHeaders{
+					CommonHeaders: maidenlanedmessages.CommonHeaders{
+						MsgType: maidenlanedmessages.MsgTypeDeployContract,
 					},
 				},
 			},
@@ -99,12 +99,12 @@ func TestWebhookHandlerContractGWSuccess(t *testing.T) {
 func TestWebhookHandlerContractGWFail(t *testing.T) {
 	assert := assert.New(t)
 
-	deployMsg := turbokeeperdmessages.DeployContract{
-		TransactionCommon: turbokeeperdmessages.TransactionCommon{
-			RequestCommon: turbokeeperdmessages.RequestCommon{
-				Headers: turbokeeperdmessages.RequestHeaders{
-					CommonHeaders: turbokeeperdmessages.CommonHeaders{
-						MsgType: turbokeeperdmessages.MsgTypeDeployContract,
+	deployMsg := maidenlanedmessages.DeployContract{
+		TransactionCommon: maidenlanedmessages.TransactionCommon{
+			RequestCommon: maidenlanedmessages.RequestCommon{
+				Headers: maidenlanedmessages.RequestHeaders{
+					CommonHeaders: maidenlanedmessages.CommonHeaders{
+						MsgType: maidenlanedmessages.MsgTypeDeployContract,
 					},
 				},
 			},

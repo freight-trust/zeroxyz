@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdkafka
+package maidenlanedkafka
 
 import (
 	"context"
@@ -23,12 +23,12 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdtx"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedtx"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -37,8 +37,8 @@ import (
 type KafkaBridgeConf struct {
 	Kafka       KafkaCommonConf `json:"kafka"`
 	MaxInFlight int             `json:"maxInFlight"`
-	turbokeeperdtx.TxnProcessorConf
-	turbokeeperdeth.RPCConf
+	maidenlanedtx.TxnProcessorConf
+	maidenlanedeth.RPCConf
 }
 
 // KafkaBridge receives messages from Kafka and dispatches them to go-ethereum over JSON/RPC
@@ -46,8 +46,8 @@ type KafkaBridge struct {
 	printYAML    *bool
 	conf         KafkaBridgeConf
 	kafka        KafkaCommon
-	rpc          turbokeeperdeth.RPCClient
-	processor    turbokeeperdtx.TxnProcessor
+	rpc          maidenlanedeth.RPCClient
+	processor    maidenlanedtx.TxnProcessor
 	inFlight     map[string]*msgContext
 	inFlightCond *sync.Cond
 }
@@ -65,7 +65,7 @@ func (k *KafkaBridge) SetConf(conf *KafkaBridgeConf) {
 // ValidateConf validates the configuration
 func (k *KafkaBridge) ValidateConf() (err error) {
 	if k.conf.RPC.URL == "" {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.ConfigNoRPC)
+		return maidenlanederrors.Errorf(maidenlanederrors.ConfigNoRPC)
 	}
 	if k.conf.MaxTXWaitTime < 10 {
 		if k.conf.MaxTXWaitTime > 0 {
@@ -98,9 +98,9 @@ func (k *KafkaBridge) CobraInit() (cmd *cobra.Command) {
 		},
 	}
 	k.kafka.CobraInit(cmd)
-	turbokeeperdeth.CobraInitRPC(cmd, &k.conf.RPCConf)
-	turbokeeperdtx.CobraInitTxnProcessor(cmd, &k.conf.TxnProcessorConf)
-	cmd.Flags().IntVarP(&k.conf.MaxInFlight, "maxinflight", "m", turbokeeperdutils.DefInt("KAFKA_MAX_INFLIGHT", 0), "Maximum messages to hold in-flight")
+	maidenlanedeth.CobraInitRPC(cmd, &k.conf.RPCConf)
+	maidenlanedtx.CobraInitTxnProcessor(cmd, &k.conf.TxnProcessorConf)
+	cmd.Flags().IntVarP(&k.conf.MaxInFlight, "maxinflight", "m", maidenlanedutils.DefInt("KAFKA_MAX_INFLIGHT", 0), "Maximum messages to hold in-flight")
 	return
 }
 
@@ -108,7 +108,7 @@ type msgContext struct {
 	timeReceived   time.Time
 	ctx            context.Context
 	producer       KafkaProducer
-	requestCommon  turbokeeperdmessages.RequestCommon
+	requestCommon  maidenlanedmessages.RequestCommon
 	reqOffset      string
 	saramaMsg      *sarama.ConsumerMessage
 	key            string
@@ -158,19 +158,19 @@ func (k *KafkaBridge) addInflightMsg(msg *sarama.ConsumerMessage, producer Kafka
 	headers := &ctx.requestCommon.Headers
 	accessToken := ""
 	for _, header := range msg.Headers {
-		if string(header.Key) == turbokeeperdmessages.RecordHeaderAccessToken {
+		if string(header.Key) == maidenlanedmessages.RecordHeaderAccessToken {
 			accessToken = string(header.Value)
 		}
 	}
-	authCtx, err := turbokeeperdauth.WithAuthContext(context.Background(), accessToken)
+	authCtx, err := maidenlanedauth.WithAuthContext(context.Background(), accessToken)
 	if err != nil {
 		log.Errorf("Unauthorized: %s - Message=%+v", err, ctx.requestCommon)
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.Unauthorized)
+		err = maidenlanederrors.Errorf(maidenlanederrors.Unauthorized)
 		return
 	}
 	ctx.ctx = authCtx
 	if headers.ID == "" {
-		headers.ID = turbokeeperdutils.UUIDv4()
+		headers.ID = maidenlanedutils.UUIDv4()
 	}
 	// Use the account as the partitioning key, or fallback to the ID, which we ensure is non-null
 	if headers.Account != "" {
@@ -241,7 +241,7 @@ func (c *msgContext) Context() context.Context {
 	return c.ctx
 }
 
-func (c *msgContext) Headers() *turbokeeperdmessages.CommonHeaders {
+func (c *msgContext) Headers() *maidenlanedmessages.CommonHeaders {
 	return &c.requestCommon.Headers.CommonHeaders
 }
 
@@ -258,7 +258,7 @@ func (c *msgContext) SendErrorReply(status int, err error) {
 
 func (c *msgContext) SendErrorReplyWithGapFill(status int, err error, gapFillTxHash string, gapFillSucceeded bool) {
 	log.Warnf("Failed to process message %s: %s", c, err)
-	errMsg := turbokeeperdmessages.NewErrorReply(err, c.saramaMsg.Value)
+	errMsg := maidenlanedmessages.NewErrorReply(err, c.saramaMsg.Value)
 	errMsg.GapFillTxHash = gapFillTxHash
 	var bGap = gapFillSucceeded
 	errMsg.GapFillSucceeded = &bGap
@@ -267,16 +267,16 @@ func (c *msgContext) SendErrorReplyWithGapFill(status int, err error, gapFillTxH
 
 func (c *msgContext) SendErrorReplyWithTX(status int, err error, txHash string) {
 	log.Warnf("Failed to process message %s: %s", c, err)
-	errMsg := turbokeeperdmessages.NewErrorReply(err, c.saramaMsg.Value)
+	errMsg := maidenlanedmessages.NewErrorReply(err, c.saramaMsg.Value)
 	errMsg.TXHash = txHash
 	c.Reply(errMsg)
 }
 
-func (c *msgContext) Reply(replyMessage turbokeeperdmessages.ReplyWithHeaders) {
+func (c *msgContext) Reply(replyMessage maidenlanedmessages.ReplyWithHeaders) {
 
 	replyHeaders := replyMessage.ReplyHeaders()
 	c.replyType = replyHeaders.MsgType
-	replyHeaders.ID = turbokeeperdutils.UUIDv4()
+	replyHeaders.ID = maidenlanedutils.UUIDv4()
 	replyHeaders.Context = c.requestCommon.Headers.Context
 	replyHeaders.ReqID = c.requestCommon.Headers.ID
 	replyHeaders.ReqOffset = c.reqOffset
@@ -324,7 +324,7 @@ func NewKafkaBridge(printYAML *bool) *KafkaBridge {
 		inFlight:     make(map[string]*msgContext),
 		inFlightCond: sync.NewCond(&sync.Mutex{}),
 	}
-	k.processor = turbokeeperdtx.NewTxnProcessor(&k.conf.TxnProcessorConf, &k.conf.RPCConf)
+	k.processor = maidenlanedtx.NewTxnProcessor(&k.conf.TxnProcessorConf, &k.conf.RPCConf)
 	k.kafka = NewKafkaCommon(&SaramaKafkaFactory{}, &k.conf.Kafka, k)
 	return k
 }
@@ -353,7 +353,7 @@ func (k *KafkaBridge) ConsumerMessagesLoop(consumer KafkaConsumer, producer Kafk
 			k.processor.OnMessage(msgCtx)
 		} else {
 			// Dispatch a generic 'bad data' reply
-			errMsg := turbokeeperdmessages.NewErrorReply(err, msg.Value)
+			errMsg := maidenlanedmessages.NewErrorReply(err, msg.Value)
 			msgCtx.Reply(errMsg)
 		}
 	}
@@ -395,7 +395,7 @@ func (k *KafkaBridge) ProducerSuccessLoop(consumer KafkaConsumer, producer Kafka
 			k.inFlightCond.Broadcast()
 		} else {
 			// This should never happen. Represents a logic bug that must be diagnosed.
-			err := turbokeeperderrors.Errorf(turbokeeperderrors.KakfaProducerConfirmMsgUnknown, reqOffset)
+			err := maidenlanederrors.Errorf(maidenlanederrors.KakfaProducerConfirmMsgUnknown, reqOffset)
 			panic(err)
 		}
 		k.inFlightCond.L.Unlock()
@@ -404,7 +404,7 @@ func (k *KafkaBridge) ProducerSuccessLoop(consumer KafkaConsumer, producer Kafka
 
 func (k *KafkaBridge) connect() (err error) {
 	// Connect the client
-	if k.rpc, err = turbokeeperdeth.RPCConnect(&k.conf.RPC); err != nil {
+	if k.rpc, err = maidenlanedeth.RPCConnect(&k.conf.RPC); err != nil {
 		return
 	}
 	k.processor.Init(k.rpc)
@@ -415,7 +415,7 @@ func (k *KafkaBridge) connect() (err error) {
 func (k *KafkaBridge) Start() (err error) {
 
 	if *k.printYAML {
-		b, err := turbokeeperdutils.MarshalToYAML(&k.conf)
+		b, err := maidenlanedutils.MarshalToYAML(&k.conf)
 		print("# YAML Configuration snippet for Kafka->Ethereum bridge\n" + string(b))
 		return err
 	}

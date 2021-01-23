@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdevents
+package maidenlanedevents
 
 import (
 	"context"
@@ -27,9 +27,9 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdkvstore"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedkvstore"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
@@ -48,7 +48,7 @@ func (m *mockRPC) CallContext(ctx context.Context, result interface{}, method st
 }
 
 func tempdir(t *testing.T) string {
-	dir, _ := ioutil.TempDir("", "turbokeeperd")
+	dir, _ := ioutil.TempDir("", "maidenlaned")
 	t.Logf("tmpdir/create: %s", dir)
 	return dir
 }
@@ -61,8 +61,8 @@ func cleanup(t *testing.T, dir string) {
 func newTestSubscriptionManager() *subscriptionMGR {
 	smconf := &SubscriptionManagerConf{}
 	sm := NewSubscriptionManager(smconf, nil).(*subscriptionMGR)
-	sm.rpc = turbokeeperdeth.NewMockRPCClientForSync(nil, nil)
-	sm.db = turbokeeperdkvstore.NewMockKV(nil)
+	sm.rpc = maidenlanedeth.NewMockRPCClientForSync(nil, nil)
+	sm.db = maidenlanedkvstore.NewMockKV(nil)
 	sm.config().WebhooksAllowPrivateIPs = true
 	sm.config().EventPollingIntervalSec = 0
 	return sm
@@ -110,8 +110,8 @@ func TestActionAndSubscriptionLifecyle(t *testing.T) {
 	subscriptionName := "testSub"
 	defer cleanup(t, dir)
 	sm := newTestSubscriptionManager()
-	sm.rpc = turbokeeperdeth.NewMockRPCClientForSync(nil, nil)
-	sm.db, _ = turbokeeperdkvstore.NewLDBKeyValueStore(path.Join(dir, "db"))
+	sm.rpc = maidenlanedeth.NewMockRPCClientForSync(nil, nil)
+	sm.db, _ = maidenlanedkvstore.NewLDBKeyValueStore(path.Join(dir, "db"))
 	defer sm.db.Close()
 
 	ctx := context.Background()
@@ -124,7 +124,7 @@ func TestActionAndSubscriptionLifecyle(t *testing.T) {
 	})
 	assert.NoError(err)
 
-	sub, err := sm.AddSubscription(ctx, nil, &turbokeeperdbind.ABIElementMarshaling{Name: "ping"}, stream.ID, "", subscriptionName)
+	sub, err := sm.AddSubscription(ctx, nil, &maidenlanedbind.ABIElementMarshaling{Name: "ping"}, stream.ID, "", subscriptionName)
 	assert.NoError(err)
 	assert.Equal(stream.ID, sub.Stream)
 
@@ -164,7 +164,7 @@ func TestActionAndSubscriptionLifecyle(t *testing.T) {
 	defer svr.Close()
 	sm = newTestSubscriptionManager()
 	sm.conf.EventLevelDBPath = path.Join(dir, "db")
-	sm.rpcConf = &turbokeeperdeth.RPCConnOpts{URL: svr.URL}
+	sm.rpcConf = &maidenlanedeth.RPCConnOpts{URL: svr.URL}
 	err = sm.Init()
 	assert.NoError(err)
 
@@ -188,8 +188,8 @@ func TestActionChildCleanup(t *testing.T) {
 	dir := tempdir(t)
 	defer cleanup(t, dir)
 	sm := newTestSubscriptionManager()
-	sm.rpc = turbokeeperdeth.NewMockRPCClientForSync(nil, nil)
-	sm.db, _ = turbokeeperdkvstore.NewLDBKeyValueStore(path.Join(dir, "db"))
+	sm.rpc = maidenlanedeth.NewMockRPCClientForSync(nil, nil)
+	sm.db, _ = maidenlanedkvstore.NewLDBKeyValueStore(path.Join(dir, "db"))
 	defer sm.db.Close()
 
 	ctx := context.Background()
@@ -199,7 +199,7 @@ func TestActionChildCleanup(t *testing.T) {
 	})
 	assert.NoError(err)
 
-	sm.AddSubscription(ctx, nil, &turbokeeperdbind.ABIElementMarshaling{Name: "ping"}, stream.ID, "12345", "")
+	sm.AddSubscription(ctx, nil, &maidenlanedbind.ABIElementMarshaling{Name: "ping"}, stream.ID, "12345", "")
 	err = sm.DeleteStream(ctx, stream.ID)
 	assert.NoError(err)
 
@@ -214,8 +214,8 @@ func TestStreamAndSubscriptionErrors(t *testing.T) {
 	subscriptionName := "testSub"
 	defer cleanup(t, dir)
 	sm := newTestSubscriptionManager()
-	sm.rpc = turbokeeperdeth.NewMockRPCClientForSync(nil, nil)
-	sm.db, _ = turbokeeperdkvstore.NewLDBKeyValueStore(path.Join(dir, "db"))
+	sm.rpc = maidenlanedeth.NewMockRPCClientForSync(nil, nil)
+	sm.db, _ = maidenlanedkvstore.NewLDBKeyValueStore(path.Join(dir, "db"))
 	defer sm.db.Close()
 
 	ctx := context.Background()
@@ -228,7 +228,7 @@ func TestStreamAndSubscriptionErrors(t *testing.T) {
 	})
 	assert.NoError(err)
 
-	sub, err := sm.AddSubscription(ctx, nil, &turbokeeperdbind.ABIElementMarshaling{Name: "ping"}, stream.ID, "", subscriptionName)
+	sub, err := sm.AddSubscription(ctx, nil, &maidenlanedbind.ABIElementMarshaling{Name: "ping"}, stream.ID, "", subscriptionName)
 	assert.NoError(err)
 
 	err = sm.ResetSubscription(ctx, sub.ID, "badness")
@@ -246,8 +246,8 @@ func TestResetSubscriptionErrors(t *testing.T) {
 	dir := tempdir(t)
 	defer cleanup(t, dir)
 	sm := newTestSubscriptionManager()
-	sm.rpc = turbokeeperdeth.NewMockRPCClientForSync(nil, nil)
-	sm.db = turbokeeperdkvstore.NewMockKV(fmt.Errorf("pop"))
+	sm.rpc = maidenlanedeth.NewMockRPCClientForSync(nil, nil)
+	sm.db = maidenlanedkvstore.NewMockKV(fmt.Errorf("pop"))
 	defer sm.db.Close()
 
 	ctx := context.Background()
@@ -268,11 +268,11 @@ func TestResetSubscriptionErrors(t *testing.T) {
 	err = sm.DeleteStream(ctx, "teststream")
 	assert.EqualError(err, "pop")
 
-	_, err = sm.AddSubscription(ctx, nil, &turbokeeperdbind.ABIElementMarshaling{Name: "any"}, "nope", "", "")
+	_, err = sm.AddSubscription(ctx, nil, &maidenlanedbind.ABIElementMarshaling{Name: "any"}, "nope", "", "")
 	assert.EqualError(err, "Stream with ID 'nope' not found")
-	_, err = sm.AddSubscription(ctx, nil, &turbokeeperdbind.ABIElementMarshaling{Name: "any"}, "teststream", "", "test")
+	_, err = sm.AddSubscription(ctx, nil, &maidenlanedbind.ABIElementMarshaling{Name: "any"}, "teststream", "", "test")
 	assert.EqualError(err, "Failed to store subscription: pop")
-	_, err = sm.AddSubscription(ctx, nil, &turbokeeperdbind.ABIElementMarshaling{Name: "any"}, "teststream", "!bad integer", "")
+	_, err = sm.AddSubscription(ctx, nil, &maidenlanedbind.ABIElementMarshaling{Name: "any"}, "teststream", "!bad integer", "")
 	assert.EqualError(err, "FromBlock cannot be parsed as a BigInt")
 	sm.subscriptions["testsub"] = &subscription{info: &SubscriptionInfo{}, rpc: sm.rpc}
 	err = sm.ResetSubscription(ctx, "nope", "0")
@@ -288,7 +288,7 @@ func TestRecoverErrors(t *testing.T) {
 	dir := tempdir(t)
 	defer cleanup(t, dir)
 	sm := newTestSubscriptionManager()
-	sm.db, _ = turbokeeperdkvstore.NewLDBKeyValueStore(path.Join(dir, "db"))
+	sm.db, _ = maidenlanedkvstore.NewLDBKeyValueStore(path.Join(dir, "db"))
 	defer sm.db.Close()
 
 	sm.db.Put(streamIDPrefix+"esid1", []byte(":bad json"))

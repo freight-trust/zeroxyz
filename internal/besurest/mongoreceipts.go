@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdrest
+package maidenlanedrest
 
 import (
 	"time"
 
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -46,7 +46,7 @@ func (m *mongoReceipts) connect() (err error) {
 	}
 	err = m.mgo.Connect(m.conf.URL, time.Duration(m.conf.ConnectTimeoutMS)*time.Millisecond)
 	if err != nil {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.ReceiptStoreMongoDBConnect, err)
+		err = maidenlanederrors.Errorf(maidenlanederrors.ReceiptStoreMongoDBConnect, err)
 		return
 	}
 	m.collection = m.mgo.GetCollection(m.conf.Database, m.conf.Collection)
@@ -65,7 +65,7 @@ func (m *mongoReceipts) connect() (err error) {
 		Sparse:     true,
 	}
 	if err = m.collection.EnsureIndex(index); err != nil {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.ReceiptStoreMongoDBIndex, err)
+		err = maidenlanederrors.Errorf(maidenlanederrors.ReceiptStoreMongoDBIndex, err)
 		return
 	}
 

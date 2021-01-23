@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdevents
+package maidenlanedevents
 
 import (
 	"bytes"
@@ -29,9 +29,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
 
 	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
@@ -56,7 +56,7 @@ const (
 
 // StreamInfo configures the stream to perform an action for each event
 type StreamInfo struct {
-	turbokeeperdmessages.TimeSorted
+	maidenlanedmessages.TimeSorted
 	ID                   string         `json:"id"`
 	Name                 string         `json:"name,omitempty"`
 	Path                 string         `json:"path"`
@@ -105,7 +105,7 @@ type eventStream struct {
 // value from the checkpoint)
 func newEventStream(sm subscriptionManager, spec *StreamInfo) (a *eventStream, err error) {
 	if spec == nil || spec.GetID() == "" {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsNoID)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.EventStreamsNoID)
 	}
 
 	if spec.BatchSize == 0 {
@@ -124,16 +124,16 @@ func newEventStream(sm subscriptionManager, spec *StreamInfo) (a *eventStream, e
 	switch spec.Type {
 	case "webhook":
 		if spec.Webhook == nil || spec.Webhook.URL == "" {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsWebhookNoURL)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.EventStreamsWebhookNoURL)
 		}
 		if _, err = url.Parse(spec.Webhook.URL); err != nil {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsWebhookInvalidURL)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.EventStreamsWebhookInvalidURL)
 		}
 		if spec.Webhook.RequestTimeoutSec == 0 {
 			spec.Webhook.RequestTimeoutSec = 30000
 		}
 	default:
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsInvalidActionType, spec.Type)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.EventStreamsInvalidActionType, spec.Type)
 	}
 
 	if strings.ToLower(spec.ErrorHandling) == ErrorHandlingBlock {
@@ -154,7 +154,7 @@ func newEventStream(sm subscriptionManager, spec *StreamInfo) (a *eventStream, e
 		pollingInterval:   time.Duration(sm.config().EventPollingIntervalSec) * time.Second,
 	}
 	if a.blockTimestampCache, err = lru.New(DefaultTimestampCacheSize); err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsCreateStreamResourceErr)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.EventStreamsCreateStreamResourceErr)
 	}
 	if a.pollingInterval == 0 {
 		// Let's us do this from UTs, without exposing it
@@ -236,10 +236,10 @@ func (a *eventStream) update(newSpec *StreamInfo) (spec *StreamInfo, err error) 
 	}
 	if newSpec.Webhook != nil {
 		if newSpec.Webhook.URL == "" {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsWebhookNoURL)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.EventStreamsWebhookNoURL)
 		}
 		if _, err = url.Parse(newSpec.Webhook.URL); err != nil {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsWebhookInvalidURL)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.EventStreamsWebhookInvalidURL)
 		}
 		if newSpec.Webhook.RequestTimeoutSec == 0 {
 			newSpec.Webhook.RequestTimeoutSec = 30000
@@ -282,7 +282,7 @@ func (a *eventStream) resume() error {
 	a.batchCond.L.Lock()
 	defer a.batchCond.L.Unlock()
 	if !a.processorDone || !a.pollerDone {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsWebhookResumeActive, a.spec.Suspended)
+		return maidenlanederrors.Errorf(maidenlanederrors.EventStreamsWebhookResumeActive, a.spec.Suspended)
 	}
 	a.spec.Suspended = false
 	a.processorDone = false
@@ -313,7 +313,7 @@ func (a *eventStream) isBlocked() bool {
 func (a *eventStream) eventPoller() {
 	defer a.updateWG.Done()
 
-	ctx := turbokeeperdauth.NewSystemAuthContext()
+	ctx := maidenlanedauth.NewSystemAuthContext()
 
 	defer func() { a.pollerDone = true }()
 	var checkpoint map[string]*big.Int
@@ -613,7 +613,7 @@ func (a *eventStream) attemptWebhookAction(batchNumber, attempt uint64, events [
 		return err
 	}
 	if a.isAddressUnsafe(addr) {
-		err := turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsWebhookProhibitedAddress, u.Hostname())
+		err := maidenlanederrors.Errorf(maidenlanederrors.EventStreamsWebhookProhibitedAddress, u.Hostname())
 		log.Errorf(err.Error())
 		return err
 	}
@@ -658,7 +658,7 @@ func (a *eventStream) attemptWebhookAction(batchNumber, attempt uint64, events [
 				log.Infof("%s: Response body: %s", a.spec.ID, string(bodyBytes))
 			}
 			if !ok {
-				err = turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsWebhookFailedHTTPStatus, a.spec.ID, res.StatusCode)
+				err = maidenlanederrors.Errorf(maidenlanederrors.EventStreamsWebhookFailedHTTPStatus, a.spec.ID, res.StatusCode)
 			}
 		}
 	}

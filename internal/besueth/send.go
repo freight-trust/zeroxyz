@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdeth
+package maidenlanedeth
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -40,7 +40,7 @@ func (tx *Txn) calculateGas(ctx context.Context, rpc RPCClient, txArgs *SendTXAr
 
 	if err := rpc.CallContext(ctx, &gas, "eth_estimateGas", txArgs); err != nil {
 		// Now we attempt a call of the transaction, because that will return us a useful error in the case, of a revert.
-		estError := turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendGasEstimateFailed, err)
+		estError := maidenlanederrors.Errorf(maidenlanederrors.TransactionSendGasEstimateFailed, err)
 		log.Errorf(estError.Error())
 		if _, err := tx.Call(ctx, rpc, "latest"); err != nil {
 			return err
@@ -71,7 +71,7 @@ func (tx *Txn) Call(ctx context.Context, rpc RPCClient, blocknumber string) (res
 
 	var hexString string
 	if err = rpc.CallContext(ctx, &hexString, "eth_call", txArgs, blocknumber); err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendCallFailedNoRevert, err)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendCallFailedNoRevert, err)
 	}
 	if len(hexString) == 0 || hexString == "0x" {
 		return nil, nil
@@ -91,9 +91,9 @@ func (tx *Txn) Call(ctx context.Context, rpc RPCClient, blocknumber string) (res
 		errorStringBytes, err := hex.DecodeString(errorStringHex)
 		log.Warnf("EVM Reverted. Message='%s' Offset='%s'", errorStringBytes, dataOffsetHex.Text(10))
 		if err != nil {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendCallFailedRevertNoMessage)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendCallFailedRevertNoMessage)
 		}
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendCallFailedRevertMessage, errorStringBytes)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendCallFailedRevertMessage, errorStringBytes)
 	}
 	log.Debugf("eth_call response: %s", hexString)
 	res = common.FromHex(hexString)
@@ -181,7 +181,7 @@ func (tx *Txn) submitTXtoNode(ctx context.Context, rpc RPCClient, txArgs *SendTX
 		txArgs.Restriction = "restricted"
 		// PrivateFrom is requires for Orion transactions
 		if txArgs.PrivateFrom == "" {
-			return "", turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendMissingPrivateFromOrion)
+			return "", maidenlanederrors.Errorf(maidenlanederrors.TransactionSendMissingPrivateFromOrion)
 		}
 		isPrivate = true
 	} else if len(tx.PrivateFor) > 0 {
@@ -194,7 +194,7 @@ func (tx *Txn) submitTXtoNode(ctx context.Context, rpc RPCClient, txArgs *SendTX
 	var callParam0 interface{} = txArgs
 	if tx.Signer != nil {
 		if isPrivate {
-			return "", turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendPrivateTXWithExternalSigner, tx.Signer.Type())
+			return "", maidenlanederrors.Errorf(maidenlanederrors.TransactionSendPrivateTXWithExternalSigner, tx.Signer.Type())
 		}
 		// Sign the transaction and get the bytes, which we pass to eth_sendRawTransaction
 		jsonRPCMethod = "eth_sendRawTransaction"

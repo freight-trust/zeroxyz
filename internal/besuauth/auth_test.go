@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdauth
+package maidenlanedauth
 
 import (
 	"context"
 	"testing"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth/turbokeeperdauthtest"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth/maidenlanedauthtest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,8 +27,8 @@ func TestSystemContext(t *testing.T) {
 
 	assert.True(IsSystemContext(NewSystemAuthContext()))
 	assert.False(IsSystemContext(context.Background()))
-	assert.False(IsSystemContext(context.WithValue(context.Background(), turbokeeperdContextKeySystemAuth, "false")))
-	assert.False(IsSystemContext(context.WithValue(context.Background(), turbokeeperdContextKeySystemAuth, false)))
+	assert.False(IsSystemContext(context.WithValue(context.Background(), maidenlanedContextKeySystemAuth, "false")))
+	assert.False(IsSystemContext(context.WithValue(context.Background(), maidenlanedContextKeySystemAuth, false)))
 
 }
 
@@ -40,7 +40,7 @@ func TestAccessToken(t *testing.T) {
 	assert.Equal("", GetAccessToken(ctx))
 	assert.Equal(nil, GetAuthContext(ctx))
 
-	RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
+	RegisterSecurityModule(&maidenlanedauthtest.TestSecurityModule{})
 
 	ctx, err = WithAuthContext(context.Background(), "testat")
 	assert.NoError(err)
@@ -61,7 +61,7 @@ func TestAuthRPC(t *testing.T) {
 
 	assert.NoError(AuthRPC(context.Background(), "anything"))
 
-	RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
+	RegisterSecurityModule(&maidenlanedauthtest.TestSecurityModule{})
 
 	assert.EqualError(AuthRPC(context.Background(), "anything"), "No auth context")
 
@@ -80,7 +80,7 @@ func TestAuthRPCSubscribe(t *testing.T) {
 
 	assert.NoError(AuthRPCSubscribe(context.Background(), "anything", nil))
 
-	RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
+	RegisterSecurityModule(&maidenlanedauthtest.TestSecurityModule{})
 
 	assert.EqualError(AuthRPCSubscribe(context.Background(), "anything", nil), "No auth context")
 
@@ -99,7 +99,7 @@ func TestAuthEventStreams(t *testing.T) {
 
 	assert.NoError(AuthEventStreams(context.Background()))
 
-	RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
+	RegisterSecurityModule(&maidenlanedauthtest.TestSecurityModule{})
 
 	assert.EqualError(AuthEventStreams(context.Background()), "No auth context")
 
@@ -117,7 +117,7 @@ func TestAuthListAsyncReplies(t *testing.T) {
 
 	assert.NoError(AuthListAsyncReplies(context.Background()))
 
-	RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
+	RegisterSecurityModule(&maidenlanedauthtest.TestSecurityModule{})
 
 	assert.EqualError(AuthListAsyncReplies(context.Background()), "No auth context")
 
@@ -135,7 +135,7 @@ func TestAuthReadAsyncReplyByUUID(t *testing.T) {
 
 	assert.NoError(AuthReadAsyncReplyByUUID(context.Background()))
 
-	RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
+	RegisterSecurityModule(&maidenlanedauthtest.TestSecurityModule{})
 
 	assert.EqualError(AuthReadAsyncReplyByUUID(context.Background()), "No auth context")
 

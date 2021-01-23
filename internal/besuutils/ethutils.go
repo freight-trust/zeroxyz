@@ -12,26 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdutils
+package maidenlanedutils
 
 import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 )
 
 // StrToAddress is a helper to parse eth addresses with useful errors
 func StrToAddress(desc string, strAddr string) (addr common.Address, err error) {
 	if strAddr == "" {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.HelperStrToAddressRequiredField, desc)
+		err = maidenlanederrors.Errorf(maidenlanederrors.HelperStrToAddressRequiredField, desc)
 		return
 	}
 	if !strings.HasPrefix(strAddr, "0x") {
 		strAddr = "0x" + strAddr
 	}
 	if !common.IsHexAddress(strAddr) {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.HelperStrToAddressBadAddress, desc)
+		err = maidenlanederrors.Errorf(maidenlanederrors.HelperStrToAddressBadAddress, desc)
 		return
 	}
 	addr = common.HexToAddress(strAddr)

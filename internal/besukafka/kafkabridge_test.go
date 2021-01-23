@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdkafka
+package maidenlanedkafka
 
 import (
 	"crypto/tls"
@@ -24,11 +24,11 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth/turbokeeperdauthtest"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdtx"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth/maidenlanedauthtest"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedtx"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -75,19 +75,19 @@ func (k *testKafkaCommon) Producer() KafkaProducer {
 }
 
 type testKafkaMsgProcessor struct {
-	messages chan turbokeeperdtx.TxnContext
-	rpc      turbokeeperdeth.RPCClient
+	messages chan maidenlanedtx.TxnContext
+	rpc      maidenlanedeth.RPCClient
 }
 
 func (p *testKafkaMsgProcessor) ResolveAddress(from string) (resolvedFrom string, err error) {
 	return from, nil
 }
 
-func (p *testKafkaMsgProcessor) Init(rpc turbokeeperdeth.RPCClient) {
+func (p *testKafkaMsgProcessor) Init(rpc maidenlanedeth.RPCClient) {
 	p.rpc = rpc
 }
 
-func (p *testKafkaMsgProcessor) OnMessage(msg turbokeeperdtx.TxnContext) {
+func (p *testKafkaMsgProcessor) OnMessage(msg maidenlanedtx.TxnContext) {
 	log.Infof("Dispatched message context to processor: %s", msg)
 	p.messages <- msg
 	return
@@ -112,7 +112,7 @@ func newTestKafkaBridge() (k *KafkaBridge, kafkaCmd *cobra.Command) {
 	k = NewKafkaBridge(&printYAML)
 	k.kafka = &testKafkaCommon{}
 	k.processor = &testKafkaMsgProcessor{
-		messages: make(chan turbokeeperdtx.TxnContext),
+		messages: make(chan maidenlanedtx.TxnContext),
 	}
 	kafkaCmd = k.CobraInit()
 	return k, kafkaCmd
@@ -215,12 +215,12 @@ func setupMocks() (*KafkaBridge, *testKafkaMsgProcessor, *MockKafkaConsumer, *Mo
 
 func TestSingleMessageWithReply(t *testing.T) {
 	assert := assert.New(t)
-	turbokeeperdauth.RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
+	maidenlanedauth.RegisterSecurityModule(&maidenlanedauthtest.TestSecurityModule{})
 
 	_, processor, mockConsumer, mockProducer, wg := setupMocks()
 
 	// Send a minimal test message
-	msg1 := turbokeeperdmessages.RequestCommon{}
+	msg1 := maidenlanedmessages.RequestCommon{}
 	msg1.Headers.MsgType = "TestSingleMessageWithReply"
 	msg1Ctx := map[string]interface{}{
 		"some": "data",
@@ -237,7 +237,7 @@ func TestSingleMessageWithReply(t *testing.T) {
 		Value:     msg1bytes,
 		Headers: []*sarama.RecordHeader{
 			{
-				Key:   []byte(turbokeeperdmessages.RecordHeaderAccessToken),
+				Key:   []byte(maidenlanedmessages.RecordHeaderAccessToken),
 				Value: []byte("testat"),
 			},
 		},
@@ -245,19 +245,19 @@ func TestSingleMessageWithReply(t *testing.T) {
 
 	// Get the message via the processor
 	msgContext1 := <-processor.messages
-	assert.Equal("testat", turbokeeperdauth.GetAccessToken(msgContext1.Context()))
-	assert.Equal("verified", turbokeeperdauth.GetAuthContext(msgContext1.Context()))
+	assert.Equal("testat", maidenlanedauth.GetAccessToken(msgContext1.Context()))
+	assert.Equal("verified", maidenlanedauth.GetAuthContext(msgContext1.Context()))
 	assert.NotEmpty(msgContext1.Headers().ID) // Generated one as not supplied
 	assert.Equal(msg1.Headers.MsgType, msgContext1.Headers().MsgType)
 	assert.Equal("data", msgContext1.Headers().Context["some"])
 	assert.Equal(len(msgContext1.(*msgContext).replyBytes), msgContext1.(*msgContext).Length())
-	var msgUnmarshaled turbokeeperdmessages.RequestCommon
+	var msgUnmarshaled maidenlanedmessages.RequestCommon
 	msgContext1.Unmarshal(&msgUnmarshaled)
 	assert.Equal(msg1.Headers.MsgType, msgUnmarshaled.Headers.MsgType)
 
 	// Send the reply in a go routine
 	go func() {
-		reply1 := turbokeeperdmessages.ReplyCommon{}
+		reply1 := maidenlanedmessages.ReplyCommon{}
 		reply1.Headers.MsgType = "TestReply"
 		msgContext1.Reply(&reply1)
 	}()
@@ -270,7 +270,7 @@ func TestSingleMessageWithReply(t *testing.T) {
 		assert.Fail("Could not get bytes from reply: %s", err)
 		return
 	}
-	var replySent turbokeeperdmessages.ReplyCommon
+	var replySent maidenlanedmessages.ReplyCommon
 	err = json.Unmarshal(replyBytes, &replySent)
 	if err != nil {
 		assert.Fail("Could not unmarshal reply: %s", err)
@@ -287,17 +287,17 @@ func TestSingleMessageWithReply(t *testing.T) {
 	mockConsumer.Close()
 	wg.Wait()
 
-	turbokeeperdauth.RegisterSecurityModule(nil)
+	maidenlanedauth.RegisterSecurityModule(nil)
 }
 
 func TestSingleMessageWithNotAuthorizedReply(t *testing.T) {
 	assert := assert.New(t)
-	turbokeeperdauth.RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
+	maidenlanedauth.RegisterSecurityModule(&maidenlanedauthtest.TestSecurityModule{})
 
 	_, _, mockConsumer, mockProducer, wg := setupMocks()
 
 	// Send a minimal test message
-	msg1 := turbokeeperdmessages.RequestCommon{}
+	msg1 := maidenlanedmessages.RequestCommon{}
 	msg1.Headers.MsgType = "TestSingleMessageWithErrorReply"
 	msg1.Headers.Account = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
 	msg1bytes, _ := json.Marshal(&msg1)
@@ -312,7 +312,7 @@ func TestSingleMessageWithNotAuthorizedReply(t *testing.T) {
 		assert.Fail("Could not get bytes from reply: %s", err)
 		return
 	}
-	var errorReply turbokeeperdmessages.ErrorReply
+	var errorReply maidenlanedmessages.ErrorReply
 	err = json.Unmarshal(replyBytes, &errorReply)
 	if err != nil {
 		assert.Fail("Could not unmarshal reply: %s", err)
@@ -325,7 +325,7 @@ func TestSingleMessageWithNotAuthorizedReply(t *testing.T) {
 	mockConsumer.Close()
 	wg.Wait()
 
-	turbokeeperdauth.RegisterSecurityModule(nil)
+	maidenlanedauth.RegisterSecurityModule(nil)
 }
 
 func TestSingleMessageWithErrorReply(t *testing.T) {
@@ -334,7 +334,7 @@ func TestSingleMessageWithErrorReply(t *testing.T) {
 	_, processor, mockConsumer, mockProducer, wg := setupMocks()
 
 	// Send a minimal test message
-	msg1 := turbokeeperdmessages.RequestCommon{}
+	msg1 := maidenlanedmessages.RequestCommon{}
 	msg1.Headers.MsgType = "TestSingleMessageWithErrorReply"
 	msg1.Headers.Account = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
 	msg1bytes, _ := json.Marshal(&msg1)
@@ -356,7 +356,7 @@ func TestSingleMessageWithErrorReply(t *testing.T) {
 		assert.Fail("Could not get bytes from reply: %s", err)
 		return
 	}
-	var errorReply turbokeeperdmessages.ErrorReply
+	var errorReply maidenlanedmessages.ErrorReply
 	err = json.Unmarshal(replyBytes, &errorReply)
 	if err != nil {
 		assert.Fail("Could not unmarshal reply: %s", err)
@@ -376,7 +376,7 @@ func TestSingleMessageWithErrorReplyWithGapFillDetail(t *testing.T) {
 	_, processor, mockConsumer, mockProducer, wg := setupMocks()
 
 	// Send a minimal test message
-	msg1 := turbokeeperdmessages.RequestCommon{}
+	msg1 := maidenlanedmessages.RequestCommon{}
 	msg1.Headers.MsgType = "TestSingleMessageWithErrorReply"
 	msg1.Headers.Account = "0xAA983AD2a0e0eD8ac639277F37be42F2A5d2618c"
 	msg1bytes, _ := json.Marshal(&msg1)
@@ -394,7 +394,7 @@ func TestSingleMessageWithErrorReplyWithGapFillDetail(t *testing.T) {
 	replyKafkaMsg := <-mockProducer.MockInput
 	mockProducer.MockSuccesses <- replyKafkaMsg
 	replyBytes, _ := replyKafkaMsg.Value.Encode()
-	var errorReply turbokeeperdmessages.ErrorReply
+	var errorReply maidenlanedmessages.ErrorReply
 	json.Unmarshal(replyBytes, &errorReply)
 	assert.Equal("bang", errorReply.ErrorMessage)
 	assert.Equal("txhash", errorReply.GapFillTxHash)
@@ -414,7 +414,7 @@ func TestMoreMessagesThanMaxInFlight(t *testing.T) {
 	// Send 20 messages (10 is the max inflight)
 	go func() {
 		for i := 0; i < 20; i++ {
-			msg := turbokeeperdmessages.RequestCommon{}
+			msg := maidenlanedmessages.RequestCommon{}
 			msg.Headers.MsgType = "TestAddInflightMsg"
 			msg.Headers.ID = fmt.Sprintf("msg%d", i)
 			msg1bytes, _ := json.Marshal(&msg)
@@ -424,7 +424,7 @@ func TestMoreMessagesThanMaxInFlight(t *testing.T) {
 	}()
 
 	// 10 messages should be sent into the processor
-	var msgContexts []turbokeeperdtx.TxnContext
+	var msgContexts []maidenlanedtx.TxnContext
 	for i := 0; i < 10; i++ {
 		msgContext := <-processor.messages
 		log.Infof("Processor passed %s", msgContext.Headers().ID)
@@ -434,9 +434,9 @@ func TestMoreMessagesThanMaxInFlight(t *testing.T) {
 	assert.Equal(10, len(k.inFlight))
 
 	// Send the replies for the first 10
-	go func(msgContexts []turbokeeperdtx.TxnContext) {
+	go func(msgContexts []maidenlanedtx.TxnContext) {
 		for _, msgContext := range msgContexts {
-			reply := turbokeeperdmessages.ReplyCommon{}
+			reply := maidenlanedmessages.ReplyCommon{}
 			msgContext.Reply(&reply)
 			log.Infof("Sent reply for %s", msgContext.Headers().ID)
 		}
@@ -448,7 +448,7 @@ func TestMoreMessagesThanMaxInFlight(t *testing.T) {
 	}
 
 	// 10 more messages should be sent into the processor
-	msgContexts = []turbokeeperdtx.TxnContext{}
+	msgContexts = []maidenlanedtx.TxnContext{}
 	for i := 10; i < 20; i++ {
 		msgContext := <-processor.messages
 		log.Infof("Processor passed %s", msgContext.Headers().ID)
@@ -460,10 +460,10 @@ func TestMoreMessagesThanMaxInFlight(t *testing.T) {
 	// Send the replies for the next 10 - in reverse order
 	var wg1 sync.WaitGroup
 	wg1.Add(1)
-	go func(msgContexts []turbokeeperdtx.TxnContext) {
+	go func(msgContexts []maidenlanedtx.TxnContext) {
 		for i := (len(msgContexts) - 1); i >= 0; i-- {
 			msgContext := msgContexts[i]
-			reply := turbokeeperdmessages.ReplyCommon{}
+			reply := maidenlanedmessages.ReplyCommon{}
 			msgContext.Reply(&reply)
 			log.Infof("Sent reply for %s", msgContext.Headers().ID)
 		}

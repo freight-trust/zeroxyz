@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdevents
+package maidenlanedevents
 
 import (
 	"context"
@@ -20,9 +20,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdkvstore"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedkvstore"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -65,17 +65,17 @@ func newTestStream() *eventStream {
 	return a
 }
 
-func testSubInfo(event *turbokeeperdbind.ABIElementMarshaling) *SubscriptionInfo {
+func testSubInfo(event *maidenlanedbind.ABIElementMarshaling) *SubscriptionInfo {
 	return &SubscriptionInfo{ID: "test", Stream: "streamID", Event: event}
 }
 
 func TestCreateWebhookSub(t *testing.T) {
 	assert := assert.New(t)
 
-	rpc := turbokeeperdeth.NewMockRPCClientForSync(nil, nil)
-	event := &turbokeeperdbind.ABIElementMarshaling{
+	rpc := maidenlanedeth.NewMockRPCClientForSync(nil, nil)
+	event := &maidenlanedbind.ABIElementMarshaling{
 		Name: "glastonbury",
-		Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
+		Inputs: []maidenlanedbind.ABIArgumentMarshaling{
 			{
 				Name: "field",
 				Type: "address",
@@ -112,14 +112,14 @@ func TestCreateWebhookSub(t *testing.T) {
 func TestCreateWebhookSubWithAddr(t *testing.T) {
 	assert := assert.New(t)
 
-	rpc := turbokeeperdeth.NewMockRPCClientForSync(nil, nil)
+	rpc := maidenlanedeth.NewMockRPCClientForSync(nil, nil)
 	m := &mockSubMgr{stream: newTestStream()}
-	event := &turbokeeperdbind.ABIElementMarshaling{
+	event := &maidenlanedbind.ABIElementMarshaling{
 		Name:      "devcon",
 		Anonymous: true,
 	}
 
-	addr := turbokeeperdbind.HexToAddress("0x0123456789abcDEF0123456789abCDef01234567")
+	addr := maidenlanedbind.HexToAddress("0x0123456789abcDEF0123456789abCDef01234567")
 	subInfo := testSubInfo(event)
 	subInfo.Name = "mySubscription"
 	s, err := newSubscription(m, rpc, &addr, subInfo)
@@ -133,7 +133,7 @@ func TestCreateWebhookSubWithAddr(t *testing.T) {
 
 func TestCreateSubscriptionNoEvent(t *testing.T) {
 	assert := assert.New(t)
-	event := &turbokeeperdbind.ABIElementMarshaling{}
+	event := &maidenlanedbind.ABIElementMarshaling{}
 	m := &mockSubMgr{stream: newTestStream()}
 	_, err := newSubscription(m, nil, nil, testSubInfo(event))
 	assert.EqualError(err, "Solidity event name must be specified")
@@ -141,8 +141,8 @@ func TestCreateSubscriptionNoEvent(t *testing.T) {
 
 func TestCreateSubscriptionBadABI(t *testing.T) {
 	assert := assert.New(t)
-	event := &turbokeeperdbind.ABIElementMarshaling{
-		Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
+	event := &maidenlanedbind.ABIElementMarshaling{
+		Inputs: []maidenlanedbind.ABIArgumentMarshaling{
 			{Name: "badness", Type: "-1"},
 		},
 	}
@@ -153,7 +153,7 @@ func TestCreateSubscriptionBadABI(t *testing.T) {
 
 func TestCreateSubscriptionMissingAction(t *testing.T) {
 	assert := assert.New(t)
-	event := &turbokeeperdbind.ABIElementMarshaling{Name: "party"}
+	event := &maidenlanedbind.ABIElementMarshaling{Name: "party"}
 	m := &mockSubMgr{err: fmt.Errorf("nope")}
 	_, err := newSubscription(m, nil, nil, testSubInfo(event))
 	assert.EqualError(err, "nope")
@@ -162,14 +162,14 @@ func TestCreateSubscriptionMissingAction(t *testing.T) {
 func TestRestoreSubscriptionMissingAction(t *testing.T) {
 	assert := assert.New(t)
 	m := &mockSubMgr{err: fmt.Errorf("nope")}
-	_, err := restoreSubscription(m, nil, testSubInfo(&turbokeeperdbind.ABIElementMarshaling{}))
+	_, err := restoreSubscription(m, nil, testSubInfo(&maidenlanedbind.ABIElementMarshaling{}))
 	assert.EqualError(err, "nope")
 }
 
 func TestRestoreSubscriptionBadType(t *testing.T) {
 	assert := assert.New(t)
-	event := &turbokeeperdbind.ABIElementMarshaling{
-		Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
+	event := &maidenlanedbind.ABIElementMarshaling{
+		Inputs: []maidenlanedbind.ABIArgumentMarshaling{
 			{Name: "badness", Type: "-1"},
 		},
 	}
@@ -181,7 +181,7 @@ func TestRestoreSubscriptionBadType(t *testing.T) {
 func TestProcessEventsStaleFilter(t *testing.T) {
 	assert := assert.New(t)
 	s := &subscription{
-		rpc: turbokeeperdeth.NewMockRPCClientForSync(fmt.Errorf("filter not found"), nil),
+		rpc: maidenlanedeth.NewMockRPCClientForSync(fmt.Errorf("filter not found"), nil),
 	}
 	err := s.processNewEvents(context.Background())
 	assert.EqualError(err, "filter not found")
@@ -191,13 +191,13 @@ func TestProcessEventsStaleFilter(t *testing.T) {
 func TestProcessEventsCannotProcess(t *testing.T) {
 	assert := assert.New(t)
 	s := &subscription{
-		rpc: turbokeeperdeth.NewMockRPCClientForSync(nil, func(method string, res interface{}, args ...interface{}) {
+		rpc: maidenlanedeth.NewMockRPCClientForSync(nil, func(method string, res interface{}, args ...interface{}) {
 			les := res.(*[]*logEntry)
 			*les = append(*les, &logEntry{
 				Data: "0x no hex here sorry",
 			})
 		}),
-		lp: newLogProcessor("", &turbokeeperdbind.ABIEvent{}, newTestStream()),
+		lp: newLogProcessor("", &maidenlanedbind.ABIEvent{}, newTestStream()),
 	}
 	err := s.processNewEvents(context.Background())
 	// We swallow the error in this case - as we simply couldn't read the event
@@ -208,7 +208,7 @@ func TestInitialFilterFail(t *testing.T) {
 	assert := assert.New(t)
 	s := &subscription{
 		info: &SubscriptionInfo{},
-		rpc:  turbokeeperdeth.NewMockRPCClientForSync(fmt.Errorf("pop"), nil),
+		rpc:  maidenlanedeth.NewMockRPCClientForSync(fmt.Errorf("pop"), nil),
 	}
 	_, err := s.setInitialBlockHeight(context.Background())
 	assert.EqualError(err, "eth_blockNumber returned: pop")
@@ -220,7 +220,7 @@ func TestInitialFilterBadInitialBlock(t *testing.T) {
 		info: &SubscriptionInfo{
 			FromBlock: "!integer",
 		},
-		rpc: turbokeeperdeth.NewMockRPCClientForSync(fmt.Errorf("pop"), nil),
+		rpc: maidenlanedeth.NewMockRPCClientForSync(fmt.Errorf("pop"), nil),
 	}
 	_, err := s.setInitialBlockHeight(context.Background())
 	assert.EqualError(err, "FromBlock cannot be parsed as a BigInt")
@@ -242,7 +242,7 @@ func TestRestartFilterFail(t *testing.T) {
 	assert := assert.New(t)
 	s := &subscription{
 		info: &SubscriptionInfo{},
-		rpc:  turbokeeperdeth.NewMockRPCClientForSync(fmt.Errorf("pop"), nil),
+		rpc:  maidenlanedeth.NewMockRPCClientForSync(fmt.Errorf("pop"), nil),
 	}
 	err := s.restartFilter(context.Background(), big.NewInt(0))
 	assert.EqualError(err, "eth_newFilter returned: pop")
@@ -256,7 +256,7 @@ func TestEventTimestampFail(t *testing.T) {
 	s := &subscription{
 		lp:   lp,
 		info: &SubscriptionInfo{},
-		rpc:  turbokeeperdeth.NewMockRPCClientForSync(fmt.Errorf("pop"), nil),
+		rpc:  maidenlanedeth.NewMockRPCClientForSync(fmt.Errorf("pop"), nil),
 	}
 	l := &logEntry{Timestamp: 100} // set it to a fake value, should get overwritten
 	s.getEventTimestamp(context.Background(), l)
@@ -266,7 +266,7 @@ func TestEventTimestampFail(t *testing.T) {
 func TestUnsubscribe(t *testing.T) {
 	assert := assert.New(t)
 	s := &subscription{
-		rpc: turbokeeperdeth.NewMockRPCClientForSync(nil, func(method string, res interface{}, args ...interface{}) {
+		rpc: maidenlanedeth.NewMockRPCClientForSync(nil, func(method string, res interface{}, args ...interface{}) {
 			*(res.(*string)) = "true"
 		}),
 	}
@@ -277,7 +277,7 @@ func TestUnsubscribe(t *testing.T) {
 
 func TestUnsubscribeFail(t *testing.T) {
 	assert := assert.New(t)
-	s := &subscription{rpc: turbokeeperdeth.NewMockRPCClientForSync(fmt.Errorf("pop"), nil)}
+	s := &subscription{rpc: maidenlanedeth.NewMockRPCClientForSync(fmt.Errorf("pop"), nil)}
 	err := s.unsubscribe(context.Background(), true)
 	assert.EqualError(err, "pop")
 	assert.True(s.filterStale)
@@ -286,7 +286,7 @@ func TestUnsubscribeFail(t *testing.T) {
 func TestLoadCheckpointBadJSON(t *testing.T) {
 	assert := assert.New(t)
 	sm := newTestSubscriptionManager()
-	mockKV := turbokeeperdkvstore.NewMockKV(nil)
+	mockKV := maidenlanedkvstore.NewMockKV(nil)
 	sm.db = mockKV
 	mockKV.KVS[checkpointIDPrefix+"id1"] = []byte(":bad json")
 	_, err := sm.loadCheckpoint("id1")

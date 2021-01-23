@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdtx
+package maidenlanedtx
 
 import (
 	"context"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
 )
 
 // TxnContext is passed for each message that arrives at the bridge
@@ -25,7 +25,7 @@ type TxnContext interface {
 	// Return the Go context
 	Context() context.Context
 	// Get the headers of the message
-	Headers() *turbokeeperdmessages.CommonHeaders
+	Headers() *maidenlanedmessages.CommonHeaders
 	// Unmarshal the supplied message into a give type
 	Unmarshal(msg interface{}) error
 	// Send an error reply
@@ -36,7 +36,7 @@ type TxnContext interface {
 	SendErrorReplyWithGapFill(status int, err error, gapFillTxHash string, gapFillSucceeded bool)
 	// Send a reply that can be marshaled into bytes.
 	// Sets all the common headers on behalf of the caller, based on the request context
-	Reply(replyMsg turbokeeperdmessages.ReplyWithHeaders)
+	Reply(replyMsg maidenlanedmessages.ReplyWithHeaders)
 	// Get a string summary
 	String() string
 }

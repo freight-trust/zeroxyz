@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdeth
+package maidenlanedeth
 
 import (
 	"context"
@@ -24,8 +24,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth/turbokeeperdauthtest"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth/maidenlanedauthtest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -132,7 +132,7 @@ func TestCallContextWrapper(t *testing.T) {
 func TestCallContextWrapperAuth(t *testing.T) {
 	assert := assert.New(t)
 
-	turbokeeperdauth.RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
+	maidenlanedauth.RegisterSecurityModule(&maidenlanedauthtest.TestSecurityModule{})
 
 	w := &rpcWrapper{rpc: &mockEthClient{}}
 	_, err := w.Subscribe(context.Background(), "", nil)
@@ -140,5 +140,5 @@ func TestCallContextWrapperAuth(t *testing.T) {
 	err = w.CallContext(context.Background(), nil, "")
 	assert.EqualError(err, "Unauthorized")
 
-	turbokeeperdauth.RegisterSecurityModule(nil)
+	maidenlanedauth.RegisterSecurityModule(nil)
 }

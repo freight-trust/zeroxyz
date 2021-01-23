@@ -1,5 +1,5 @@
 
-package turbokeeperplugins
+package maidenlaneplugins
 
 // EventOperation enumerates operation types on events
 type EventOperation int

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdrest
+package maidenlanedrest
 
 import (
 	"context"
@@ -26,17 +26,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdcontracts"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdtx"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedcontracts"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedtx"
 
 	"github.com/Shopify/sarama"
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdkafka"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedkafka"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -63,14 +63,14 @@ type MongoDBReceiptStoreConf struct {
 
 // RESTGatewayConf defines the YAML config structure for a webhooks bridge instance
 type RESTGatewayConf struct {
-	Kafka    turbokeeperdkafka.KafkaCommonConf              `json:"kafka"`
+	Kafka    maidenlanedkafka.KafkaCommonConf              `json:"kafka"`
 	MongoDB  MongoDBReceiptStoreConf               `json:"mongodb"`
 	MemStore ReceiptStoreConf                      `json:"memstore"`
-	OpenAPI  turbokeeperdcontracts.SmartContractGatewayConf `json:"openapi"`
+	OpenAPI  maidenlanedcontracts.SmartContractGatewayConf `json:"openapi"`
 	HTTP     struct {
 		LocalAddr string             `json:"localAddr"`
 		Port      int                `json:"port"`
-		TLS       turbokeeperdutils.TLSConfig `json:"tls"`
+		TLS       maidenlanedutils.TLSConfig `json:"tls"`
 	} `json:"http"`
 	WebhooksDirectConf
 }
@@ -79,7 +79,7 @@ type RESTGatewayConf struct {
 type RESTGateway struct {
 	printYAML       *bool
 	conf            RESTGatewayConf
-	kafka           turbokeeperdkafka.KafkaCommon
+	kafka           maidenlanedkafka.KafkaCommon
 	srv             *http.Server
 	sendCond        *sync.Cond
 	pendingMsgs     map[string]bool
@@ -87,7 +87,7 @@ type RESTGateway struct {
 	failedMsgs      map[string]error
 	receipts        *receiptStore
 	webhooks        *webhooks
-	smartContractGW turbokeeperdcontracts.SmartContractGateway
+	smartContractGW maidenlanedcontracts.SmartContractGateway
 }
 
 // Conf gets the config for this bridge
@@ -102,15 +102,15 @@ func (g *RESTGateway) SetConf(conf *RESTGatewayConf) {
 
 // ValidateConf validates the config
 func (g *RESTGateway) ValidateConf() (err error) {
-	if !turbokeeperdutils.AllOrNoneReqd(g.conf.MongoDB.URL, g.conf.MongoDB.Database, g.conf.MongoDB.Collection) {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.ConfigRESTGatewayRequiredReceiptStore)
+	if !maidenlanedutils.AllOrNoneReqd(g.conf.MongoDB.URL, g.conf.MongoDB.Database, g.conf.MongoDB.Collection) {
+		err = maidenlanederrors.Errorf(maidenlanederrors.ConfigRESTGatewayRequiredReceiptStore)
 		return
 	}
 	if g.conf.MongoDB.QueryLimit < 1 {
 		g.conf.MongoDB.QueryLimit = 100
 	}
 	if g.conf.OpenAPI.StoragePath != "" && g.conf.RPC.URL == "" {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.ConfigRESTGatewayRequiredRPC)
+		err = maidenlanederrors.Errorf(maidenlanederrors.ConfigRESTGatewayRequiredRPC)
 		return
 	}
 	return
@@ -139,7 +139,7 @@ func (g *RESTGateway) CobraInit(cmdName string) (cmd *cobra.Command) {
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) (err error) {
 			if len(g.conf.Kafka.Brokers) > 0 {
-				if err = turbokeeperdkafka.KafkaValidateConf(&g.conf.Kafka); err != nil {
+				if err = maidenlanedkafka.KafkaValidateConf(&g.conf.Kafka); err != nil {
 					return
 				}
 			} else {
@@ -157,20 +157,20 @@ func (g *RESTGateway) CobraInit(cmdName string) (cmd *cobra.Command) {
 			return
 		},
 	}
-	turbokeeperdkafka.KafkaCommonCobraInit(cmd, &g.conf.Kafka)
-	turbokeeperdeth.CobraInitRPC(cmd, &g.conf.RPCConf)
-	turbokeeperdtx.CobraInitTxnProcessor(cmd, &g.conf.TxnProcessorConf)
-	turbokeeperdcontracts.CobraInitContractGateway(cmd, &g.conf.OpenAPI)
-	cmd.Flags().IntVarP(&g.conf.MaxInFlight, "maxinflight", "m", turbokeeperdutils.DefInt("WEBHOOKS_MAX_INFLIGHT", 0), "Maximum messages to hold in-flight")
+	maidenlanedkafka.KafkaCommonCobraInit(cmd, &g.conf.Kafka)
+	maidenlanedeth.CobraInitRPC(cmd, &g.conf.RPCConf)
+	maidenlanedtx.CobraInitTxnProcessor(cmd, &g.conf.TxnProcessorConf)
+	maidenlanedcontracts.CobraInitContractGateway(cmd, &g.conf.OpenAPI)
+	cmd.Flags().IntVarP(&g.conf.MaxInFlight, "maxinflight", "m", maidenlanedutils.DefInt("WEBHOOKS_MAX_INFLIGHT", 0), "Maximum messages to hold in-flight")
 	cmd.Flags().StringVarP(&g.conf.HTTP.LocalAddr, "listen-addr", "L", os.Getenv("WEBHOOKS_LISTEN_ADDR"), "Local address to listen on")
-	cmd.Flags().IntVarP(&g.conf.HTTP.Port, "listen-port", "l", turbokeeperdutils.DefInt("WEBHOOKS_LISTEN_PORT", 8080), "Port to listen on")
+	cmd.Flags().IntVarP(&g.conf.HTTP.Port, "listen-port", "l", maidenlanedutils.DefInt("WEBHOOKS_LISTEN_PORT", 8080), "Port to listen on")
 	cmd.Flags().StringVarP(&g.conf.MongoDB.URL, "mongodb-url", "M", os.Getenv("MONGODB_URL"), "MongoDB URL for a receipt store")
 	cmd.Flags().StringVarP(&g.conf.MongoDB.Database, "mongodb-database", "D", os.Getenv("MONGODB_DATABASE"), "MongoDB receipt store database")
 	cmd.Flags().StringVarP(&g.conf.MongoDB.Collection, "mongodb-receipt-collection", "R", os.Getenv("MONGODB_COLLECTION"), "MongoDB receipt store collection")
-	cmd.Flags().IntVarP(&g.conf.MongoDB.MaxDocs, "mongodb-receipt-maxdocs", "X", turbokeeperdutils.DefInt("MONGODB_MAXDOCS", 0), "Receipt store capped size (new collections only)")
-	cmd.Flags().IntVarP(&g.conf.MongoDB.QueryLimit, "mongodb-query-limit", "Q", turbokeeperdutils.DefInt("MONGODB_QUERYLIM", 0), "Maximum docs to return on a rest call (cap on limit)")
-	cmd.Flags().IntVarP(&g.conf.MemStore.MaxDocs, "memstore-receipt-maxdocs", "v", turbokeeperdutils.DefInt("MEMSTORE_MAXDOCS", 10), "In-memory receipt store capped size")
-	cmd.Flags().IntVarP(&g.conf.MemStore.QueryLimit, "memstore-query-limit", "V", turbokeeperdutils.DefInt("MEMSTORE_QUERYLIM", 0), "In-memory maximum docs to return on a rest call")
+	cmd.Flags().IntVarP(&g.conf.MongoDB.MaxDocs, "mongodb-receipt-maxdocs", "X", maidenlanedutils.DefInt("MONGODB_MAXDOCS", 0), "Receipt store capped size (new collections only)")
+	cmd.Flags().IntVarP(&g.conf.MongoDB.QueryLimit, "mongodb-query-limit", "Q", maidenlanedutils.DefInt("MONGODB_QUERYLIM", 0), "Maximum docs to return on a rest call (cap on limit)")
+	cmd.Flags().IntVarP(&g.conf.MemStore.MaxDocs, "memstore-receipt-maxdocs", "v", maidenlanedutils.DefInt("MEMSTORE_MAXDOCS", 10), "In-memory receipt store capped size")
+	cmd.Flags().IntVarP(&g.conf.MemStore.QueryLimit, "memstore-query-limit", "V", maidenlanedutils.DefInt("MEMSTORE_QUERYLIM", 0), "In-memory maximum docs to return on a rest call")
 	return
 }
 
@@ -199,7 +199,7 @@ func (g *RESTGateway) sendError(res http.ResponseWriter, msg string, code int) {
 }
 
 // DispatchMsgAsync is the rest2eth interface method for async dispatching of messages (via our webhook logic)
-func (g *RESTGateway) DispatchMsgAsync(ctx context.Context, msg map[string]interface{}, ack bool) (*turbokeeperdmessages.AsyncSentMsg, error) {
+func (g *RESTGateway) DispatchMsgAsync(ctx context.Context, msg map[string]interface{}, ack bool) (*maidenlanedmessages.AsyncSentMsg, error) {
 	reply, _, err := g.webhooks.processMsg(ctx, msg, ack)
 	return reply, err
 }
@@ -213,7 +213,7 @@ func (g *RESTGateway) newAccessTokenContextHandler(parent http.Handler) http.Han
 		if len(hSplit) == 2 && strings.ToLower(hSplit[0]) == "bearer" {
 			accessToken = hSplit[1]
 		}
-		authCtx, err := turbokeeperdauth.WithAuthContext(req.Context(), accessToken)
+		authCtx, err := maidenlanedauth.WithAuthContext(req.Context(), accessToken)
 		if err != nil {
 			g.sendError(res, "Unauthorized", 401)
 			return
@@ -227,31 +227,31 @@ func (g *RESTGateway) newAccessTokenContextHandler(parent http.Handler) http.Han
 func (g *RESTGateway) Start() (err error) {
 
 	if *g.printYAML {
-		b, err := turbokeeperdutils.MarshalToYAML(&g.conf)
+		b, err := maidenlanedutils.MarshalToYAML(&g.conf)
 		print("# YAML Configuration snippet for REST Gateway\n" + string(b))
 		return err
 	}
 
-	tlsConfig, err := turbokeeperdutils.CreateTLSConfiguration(&g.conf.HTTP.TLS)
+	tlsConfig, err := maidenlanedutils.CreateTLSConfiguration(&g.conf.HTTP.TLS)
 	if err != nil {
 		return
 	}
 
 	router := httprouter.New()
 
-	var processor turbokeeperdtx.TxnProcessor
-	var rpcClient turbokeeperdeth.RPCClient
+	var processor maidenlanedtx.TxnProcessor
+	var rpcClient maidenlanedeth.RPCClient
 	if g.conf.RPC.URL != "" || g.conf.OpenAPI.StoragePath != "" {
-		rpcClient, err = turbokeeperdeth.RPCConnect(&g.conf.RPC)
+		rpcClient, err = maidenlanedeth.RPCConnect(&g.conf.RPC)
 		if err != nil {
 			return err
 		}
-		processor = turbokeeperdtx.NewTxnProcessor(&g.conf.TxnProcessorConf, &g.conf.RPCConf)
+		processor = maidenlanedtx.NewTxnProcessor(&g.conf.TxnProcessorConf, &g.conf.RPCConf)
 		processor.Init(rpcClient)
 	}
 
 	if g.conf.OpenAPI.StoragePath != "" {
-		g.smartContractGW, err = turbokeeperdcontracts.NewSmartContractGateway(&g.conf.OpenAPI, &g.conf.TxnProcessorConf, rpcClient, processor, g)
+		g.smartContractGW, err = maidenlanedcontracts.NewSmartContractGateway(&g.conf.OpenAPI, &g.conf.TxnProcessorConf, rpcClient, processor, g)
 		if err != nil {
 			return err
 		}

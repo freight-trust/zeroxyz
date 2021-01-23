@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdtx
+package maidenlanedtx
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,7 +31,7 @@ func TestNewAddressBookDefaultPropNames(t *testing.T) {
 
 	a := NewAddressBook(&AddressBookConf{
 		AddressbookURLPrefix: "http://localhost:12345/",
-	}, &turbokeeperdeth.RPCConf{})
+	}, &maidenlanedeth.RPCConf{})
 	ab := a.(*addressBook)
 	assert.Equal("http://localhost:12345/", ab.conf.AddressbookURLPrefix)
 	assert.Equal(defaultRPCEndpointProp, ab.conf.PropNames.RPCEndpoint)
@@ -45,7 +45,7 @@ func TestNewAddressBookCustomPropNames(t *testing.T) {
 		PropNames: AddressBookPropNamesConf{
 			RPCEndpoint: "rpcEndpointProp",
 		},
-	}, &turbokeeperdeth.RPCConf{})
+	}, &maidenlanedeth.RPCConf{})
 	ab := a.(*addressBook)
 	assert.Equal("http://localhost:12345/", ab.conf.AddressbookURLPrefix)
 	assert.Equal("rpcEndpointProp", ab.conf.PropNames.RPCEndpoint)
@@ -78,7 +78,7 @@ func TestLookupWithCaching(t *testing.T) {
 		PropNames: AddressBookPropNamesConf{
 			RPCEndpoint: "rpcEndpointProp",
 		},
-	}, &turbokeeperdeth.RPCConf{})
+	}, &maidenlanedeth.RPCConf{})
 	ab := a.(*addressBook)
 
 	log.SetLevel(log.DebugLevel)
@@ -125,7 +125,7 @@ func TestLookupBadURL(t *testing.T) {
 		PropNames: AddressBookPropNamesConf{
 			RPCEndpoint: "rpcEndpointProp",
 		},
-	}, &turbokeeperdeth.RPCConf{})
+	}, &maidenlanedeth.RPCConf{})
 	ab := a.(*addressBook)
 
 	ctx := context.Background()
@@ -151,8 +151,8 @@ func TestLookupFallbackAddress(t *testing.T) {
 		PropNames: AddressBookPropNamesConf{
 			RPCEndpoint: "rpcEndpointProp",
 		},
-	}, &turbokeeperdeth.RPCConf{
-		RPC: turbokeeperdeth.RPCConnOpts{
+	}, &maidenlanedeth.RPCConf{
+		RPC: maidenlanedeth.RPCConnOpts{
 			URL: serverURL,
 		},
 	})
@@ -184,7 +184,7 @@ func TestLookupNoFallbackAddress(t *testing.T) {
 		PropNames: AddressBookPropNamesConf{
 			RPCEndpoint: "rpcEndpointProp",
 		},
-	}, &turbokeeperdeth.RPCConf{})
+	}, &maidenlanedeth.RPCConf{})
 	ab := a.(*addressBook)
 
 	log.SetLevel(log.DebugLevel)
@@ -213,7 +213,7 @@ func TestLookupBadResponse(t *testing.T) {
 		PropNames: AddressBookPropNamesConf{
 			RPCEndpoint: "rpcEndpointProp",
 		},
-	}, &turbokeeperdeth.RPCConf{})
+	}, &maidenlanedeth.RPCConf{})
 	ab := a.(*addressBook)
 
 	log.SetLevel(log.DebugLevel)
@@ -241,7 +241,7 @@ func TestLookupFailureResponse(t *testing.T) {
 		PropNames: AddressBookPropNamesConf{
 			RPCEndpoint: "rpcEndpointProp",
 		},
-	}, &turbokeeperdeth.RPCConf{})
+	}, &maidenlanedeth.RPCConf{})
 	ab := a.(*addressBook)
 
 	log.SetLevel(log.DebugLevel)
@@ -256,7 +256,7 @@ func TestResolveHostOK(t *testing.T) {
 
 	a := NewAddressBook(&AddressBookConf{
 		HostsFile: "../../test/hosts_example",
-	}, &turbokeeperdeth.RPCConf{})
+	}, &maidenlanedeth.RPCConf{})
 	ab := a.(*addressBook)
 
 	url, err := ab.resolveHost("http://foo.bar:12345")
@@ -271,7 +271,7 @@ func TestResolveHostMissing(t *testing.T) {
 
 	a := NewAddressBook(&AddressBookConf{
 		HostsFile: "../../test/hosts_example",
-	}, &turbokeeperdeth.RPCConf{})
+	}, &maidenlanedeth.RPCConf{})
 	ab := a.(*addressBook)
 
 	url, err := ab.resolveHost("http://another")
@@ -286,7 +286,7 @@ func TestResolveHostBadFile(t *testing.T) {
 
 	a := NewAddressBook(&AddressBookConf{
 		HostsFile: "badhostsfile",
-	}, &turbokeeperdeth.RPCConf{})
+	}, &maidenlanedeth.RPCConf{})
 	ab := a.(*addressBook)
 
 	_, err := ab.resolveHost("http://any")

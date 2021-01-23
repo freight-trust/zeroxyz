@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdrest
+package maidenlanedrest
 
 import (
 	"context"
@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth/turbokeeperdauthtest"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth/maidenlanedauthtest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -64,7 +64,7 @@ func TestValidateConfInvalidOpenAPIArgs(t *testing.T) {
 func TestStartStatusStopNoKafkaWebhooksAccessToken(t *testing.T) {
 	assert := assert.New(t)
 
-	turbokeeperdauth.RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
+	maidenlanedauth.RegisterSecurityModule(&maidenlanedauthtest.TestSecurityModule{})
 	router := &httprouter.Router{}
 	fakeRPC := httptest.NewServer(router)
 	// Add username/pass to confirm we don't log
@@ -108,14 +108,14 @@ func TestStartStatusStopNoKafkaWebhooksAccessToken(t *testing.T) {
 	wg.Wait()
 	assert.EqualError(err, "http: Server closed")
 
-	turbokeeperdauth.RegisterSecurityModule(nil)
+	maidenlanedauth.RegisterSecurityModule(nil)
 
 }
 
 func TestStartStatusStopNoKafkaWebhooksMissingToken(t *testing.T) {
 	assert := assert.New(t)
 
-	turbokeeperdauth.RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
+	maidenlanedauth.RegisterSecurityModule(&maidenlanedauthtest.TestSecurityModule{})
 
 	router := &httprouter.Router{}
 	fakeRPC := httptest.NewServer(router)
@@ -160,7 +160,7 @@ func TestStartStatusStopNoKafkaWebhooksMissingToken(t *testing.T) {
 	wg.Wait()
 	assert.EqualError(err, "http: Server closed")
 
-	turbokeeperdauth.RegisterSecurityModule(nil)
+	maidenlanedauth.RegisterSecurityModule(nil)
 
 }
 

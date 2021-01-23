@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdutils
+package maidenlanedutils
 
 import (
 	"bytes"
@@ -21,7 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -57,7 +57,7 @@ func (hr *HTTPRequester) DoRequest(method, url string, bodyMap map[string]interf
 	if bodyMap != nil {
 		bodyBytes, ehr := json.Marshal(bodyMap)
 		if ehr != nil {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.HTTPRequesterSerializeFailed, ehr)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.HTTPRequesterSerializeFailed, ehr)
 		}
 		body = bytes.NewReader(bodyBytes)
 	}
@@ -70,7 +70,7 @@ func (hr *HTTPRequester) DoRequest(method, url string, bodyMap map[string]interf
 	res, ehr := hr.client.Do(req)
 	if ehr != nil {
 		log.Errorf("%s %s <-- !Failed: %s", method, url, ehr)
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.HTTPRequesterNonStatusError, hr.name)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.HTTPRequesterNonStatusError, hr.name)
 	}
 	log.Infof("%s %s <-- [%d]", method, url, res.StatusCode)
 	if res.StatusCode == 404 {
@@ -83,14 +83,14 @@ func (hr *HTTPRequester) DoRequest(method, url string, bodyMap map[string]interf
 		resBody, _ := ioutil.ReadAll(res.Body)
 		if err := json.Unmarshal(resBody, &jsonBody); err != nil {
 			log.Errorf("%s %s <-- [%d] !Failed to read body: %s", method, url, res.StatusCode, ehr)
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.HTTPRequesterStatusErrorNoData, hr.name, res.StatusCode)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.HTTPRequesterStatusErrorNoData, hr.name, res.StatusCode)
 		}
 		if res.StatusCode < 200 || res.StatusCode >= 300 {
 			log.Errorf("%s %s <-- [%d]: %+v", method, url, res.StatusCode, jsonBody)
 			if ehrMsg, ok := jsonBody["errorMessage"]; ok {
-				return nil, turbokeeperderrors.Errorf(turbokeeperderrors.HTTPRequesterStatusErrorWithData, hr.name, res.StatusCode, ehrMsg)
+				return nil, maidenlanederrors.Errorf(maidenlanederrors.HTTPRequesterStatusErrorWithData, hr.name, res.StatusCode, ehrMsg)
 			}
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.HTTPRequesterStatusError, hr.name)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.HTTPRequesterStatusError, hr.name)
 		}
 	}
 	return jsonBody, nil
@@ -100,7 +100,7 @@ func (hr *HTTPRequester) DoRequest(method, url string, bodyMap map[string]interf
 func (hr *HTTPRequester) GetResponseString(m map[string]interface{}, p string, emptyOK bool) (string, error) {
 	genericVal, exists := m[p]
 	if !exists {
-		return "", turbokeeperderrors.Errorf(turbokeeperderrors.HTTPRequesterResponseMissingField, p, hr.name)
+		return "", maidenlanederrors.Errorf(maidenlanederrors.HTTPRequesterResponseMissingField, p, hr.name)
 	}
 	var stringVal string
 	switch genericVal.(type) {
@@ -109,10 +109,10 @@ func (hr *HTTPRequester) GetResponseString(m map[string]interface{}, p string, e
 	case nil:
 		stringVal = ""
 	default:
-		return "", turbokeeperderrors.Errorf(turbokeeperderrors.HTTPRequesterResponseNonStringField, p, hr.name)
+		return "", maidenlanederrors.Errorf(maidenlanederrors.HTTPRequesterResponseNonStringField, p, hr.name)
 	}
 	if !emptyOK && stringVal == "" {
-		return "", turbokeeperderrors.Errorf(turbokeeperderrors.HTTPRequesterResponseNullField, p, hr.name)
+		return "", maidenlanederrors.Errorf(maidenlanederrors.HTTPRequesterResponseNullField, p, hr.name)
 	}
 	return stringVal, nil
 }

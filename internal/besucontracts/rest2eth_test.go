@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdcontracts
+package maidenlanedcontracts
 
 import (
 	"bytes"
@@ -26,14 +26,14 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdevents"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedevents"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth/turbokeeperdauthtest"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth/maidenlanedauthtest"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,23 +41,23 @@ import (
 type mockREST2EthDispatcher struct {
 	asyncDispatchMsg           map[string]interface{}
 	asyncDispatchAck           bool
-	asyncDispatchReply         *turbokeeperdmessages.AsyncSentMsg
+	asyncDispatchReply         *maidenlanedmessages.AsyncSentMsg
 	asyncDispatchError         error
-	sendTransactionMsg         *turbokeeperdmessages.SendTransaction
-	sendTransactionSyncReceipt *turbokeeperdmessages.TransactionReceipt
+	sendTransactionMsg         *maidenlanedmessages.SendTransaction
+	sendTransactionSyncReceipt *maidenlanedmessages.TransactionReceipt
 	sendTransactionSyncError   error
-	deployContractMsg          *turbokeeperdmessages.DeployContract
-	deployContractSyncReceipt  *turbokeeperdmessages.TransactionReceipt
+	deployContractMsg          *maidenlanedmessages.DeployContract
+	deployContractSyncReceipt  *maidenlanedmessages.TransactionReceipt
 	deployContractSyncError    error
 }
 
-func (m *mockREST2EthDispatcher) DispatchMsgAsync(ctx context.Context, msg map[string]interface{}, ack bool) (*turbokeeperdmessages.AsyncSentMsg, error) {
+func (m *mockREST2EthDispatcher) DispatchMsgAsync(ctx context.Context, msg map[string]interface{}, ack bool) (*maidenlanedmessages.AsyncSentMsg, error) {
 	m.asyncDispatchMsg = msg
 	m.asyncDispatchAck = ack
 	return m.asyncDispatchReply, m.asyncDispatchError
 }
 
-func (m *mockREST2EthDispatcher) DispatchSendTransactionSync(ctx context.Context, msg *turbokeeperdmessages.SendTransaction, replyProcessor rest2EthReplyProcessor) {
+func (m *mockREST2EthDispatcher) DispatchSendTransactionSync(ctx context.Context, msg *maidenlanedmessages.SendTransaction, replyProcessor rest2EthReplyProcessor) {
 	m.sendTransactionMsg = msg
 	if m.sendTransactionSyncError != nil {
 		replyProcessor.ReplyWithError(m.sendTransactionSyncError)
@@ -66,7 +66,7 @@ func (m *mockREST2EthDispatcher) DispatchSendTransactionSync(ctx context.Context
 	}
 }
 
-func (m *mockREST2EthDispatcher) DispatchDeployContractSync(ctx context.Context, msg *turbokeeperdmessages.DeployContract, replyProcessor rest2EthReplyProcessor) {
+func (m *mockREST2EthDispatcher) DispatchDeployContractSync(ctx context.Context, msg *maidenlanedmessages.DeployContract, replyProcessor rest2EthReplyProcessor) {
 	m.deployContractMsg = msg
 	if m.deployContractSyncError != nil {
 		replyProcessor.ReplyWithError(m.deployContractSyncError)
@@ -77,7 +77,7 @@ func (m *mockREST2EthDispatcher) DispatchDeployContractSync(ctx context.Context,
 
 type mockABILoader struct {
 	loadABIError           error
-	deployMsg              *turbokeeperdmessages.DeployContract
+	deployMsg              *maidenlanedmessages.DeployContract
 	abiInfo                *abiInfo
 	contractInfo           *contractInfo
 	registeredContractAddr string
@@ -87,7 +87,7 @@ type mockABILoader struct {
 	postDeployError        error
 }
 
-func (m *mockABILoader) loadDeployMsgForInstance(addrHexNo0x string) (*turbokeeperdmessages.DeployContract, *contractInfo, error) {
+func (m *mockABILoader) loadDeployMsgForInstance(addrHexNo0x string) (*maidenlanedmessages.DeployContract, *contractInfo, error) {
 	m.capturedAddr = addrHexNo0x
 	return m.deployMsg, m.contractInfo, m.loadABIError
 }
@@ -96,7 +96,7 @@ func (m *mockABILoader) resolveContractAddr(registeredName string) (string, erro
 	return m.registeredContractAddr, m.resolveContractErr
 }
 
-func (m *mockABILoader) loadDeployMsgByID(addrHexNo0x string) (*turbokeeperdmessages.DeployContract, *abiInfo, error) {
+func (m *mockABILoader) loadDeployMsgByID(addrHexNo0x string) (*maidenlanedmessages.DeployContract, *abiInfo, error) {
 	return m.deployMsg, m.abiInfo, m.loadABIError
 }
 
@@ -104,8 +104,8 @@ func (m *mockABILoader) checkNameAvailable(name string, isRemote bool) error {
 	return m.nameAvailableError
 }
 
-func (m *mockABILoader) PreDeploy(msg *turbokeeperdmessages.DeployContract) error { return nil }
-func (m *mockABILoader) PostDeploy(msg *turbokeeperdmessages.TransactionReceipt) error {
+func (m *mockABILoader) PreDeploy(msg *maidenlanedmessages.DeployContract) error { return nil }
+func (m *mockABILoader) PostDeploy(msg *maidenlanedmessages.TransactionReceipt) error {
 	return m.postDeployError
 }
 func (m *mockABILoader) AddRoutes(router *httprouter.Router) { return }
@@ -129,24 +129,24 @@ func (m *mockRPC) CallContext(ctx context.Context, result interface{}, method st
 type mockSubMgr struct {
 	err             error
 	updateStreamErr error
-	sub             *turbokeeperdevents.SubscriptionInfo
-	stream          *turbokeeperdevents.StreamInfo
-	subs            []*turbokeeperdevents.SubscriptionInfo
-	streams         []*turbokeeperdevents.StreamInfo
+	sub             *maidenlanedevents.SubscriptionInfo
+	stream          *maidenlanedevents.StreamInfo
+	subs            []*maidenlanedevents.SubscriptionInfo
+	streams         []*maidenlanedevents.StreamInfo
 	suspended       bool
 	resumed         bool
-	capturedAddr    *turbokeeperdbind.Address
+	capturedAddr    *maidenlanedbind.Address
 }
 
 func (m *mockSubMgr) Init() error { return m.err }
-func (m *mockSubMgr) AddStream(ctx context.Context, spec *turbokeeperdevents.StreamInfo) (*turbokeeperdevents.StreamInfo, error) {
+func (m *mockSubMgr) AddStream(ctx context.Context, spec *maidenlanedevents.StreamInfo) (*maidenlanedevents.StreamInfo, error) {
 	return spec, m.err
 }
-func (m *mockSubMgr) UpdateStream(ctx context.Context, id string, spec *turbokeeperdevents.StreamInfo) (*turbokeeperdevents.StreamInfo, error) {
+func (m *mockSubMgr) UpdateStream(ctx context.Context, id string, spec *maidenlanedevents.StreamInfo) (*maidenlanedevents.StreamInfo, error) {
 	return m.stream, m.updateStreamErr
 }
-func (m *mockSubMgr) Streams(ctx context.Context) []*turbokeeperdevents.StreamInfo { return m.streams }
-func (m *mockSubMgr) StreamByID(ctx context.Context, id string) (*turbokeeperdevents.StreamInfo, error) {
+func (m *mockSubMgr) Streams(ctx context.Context) []*maidenlanedevents.StreamInfo { return m.streams }
+func (m *mockSubMgr) StreamByID(ctx context.Context, id string) (*maidenlanedevents.StreamInfo, error) {
 	return m.stream, m.err
 }
 func (m *mockSubMgr) SuspendStream(ctx context.Context, id string) error {
@@ -158,12 +158,12 @@ func (m *mockSubMgr) ResumeStream(ctx context.Context, id string) error {
 	return m.err
 }
 func (m *mockSubMgr) DeleteStream(ctx context.Context, id string) error { return m.err }
-func (m *mockSubMgr) AddSubscription(ctx context.Context, addr *turbokeeperdbind.Address, event *turbokeeperdbind.ABIElementMarshaling, streamID, initialBlock, name string) (*turbokeeperdevents.SubscriptionInfo, error) {
+func (m *mockSubMgr) AddSubscription(ctx context.Context, addr *maidenlanedbind.Address, event *maidenlanedbind.ABIElementMarshaling, streamID, initialBlock, name string) (*maidenlanedevents.SubscriptionInfo, error) {
 	m.capturedAddr = addr
 	return m.sub, m.err
 }
-func (m *mockSubMgr) Subscriptions(ctx context.Context) []*turbokeeperdevents.SubscriptionInfo { return m.subs }
-func (m *mockSubMgr) SubscriptionByID(ctx context.Context, id string) (*turbokeeperdevents.SubscriptionInfo, error) {
+func (m *mockSubMgr) Subscriptions(ctx context.Context) []*maidenlanedevents.SubscriptionInfo { return m.subs }
+func (m *mockSubMgr) SubscriptionByID(ctx context.Context, id string) (*maidenlanedevents.SubscriptionInfo, error) {
 	return m.sub, m.err
 }
 func (m *mockSubMgr) DeleteSubscription(ctx context.Context, id string) error { return m.err }
@@ -173,9 +173,9 @@ func (m *mockSubMgr) ResetSubscription(ctx context.Context, id, initialBlock str
 func (m *mockSubMgr) Close() {}
 
 func newTestDeployMsg(addr string) *deployContractWithAddress {
-	compiled, _ := turbokeeperdeth.CompileContract(simpleEventsSource(), "SimpleEvents", "", "")
+	compiled, _ := maidenlanedeth.CompileContract(simpleEventsSource(), "SimpleEvents", "", "")
 	return &deployContractWithAddress{
-		DeployContract: turbokeeperdmessages.DeployContract{ABI: compiled.ABI},
+		DeployContract: maidenlanedmessages.DeployContract{ABI: compiled.ABI},
 		Address:        addr,
 	}
 }
@@ -207,7 +207,7 @@ func newTestREST2EthCustomAbiLoader(dispatcher *mockREST2EthDispatcher, abiLoade
 func newTestREST2EthAndMsg(dispatcher *mockREST2EthDispatcher, from, to string, bodyMap map[string]interface{}) (*rest2eth, *mockRPC, *httprouter.Router, *httptest.ResponseRecorder, *http.Request) {
 	body, _ := json.Marshal(&bodyMap)
 	req := httptest.NewRequest("POST", "/contracts/"+to+"/set", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req.Header.Add("x-maidenlane-from", from)
 	res := httptest.NewRecorder()
 
 	r, mockRPC, router := newTestREST2Eth(dispatcher)
@@ -223,7 +223,7 @@ func newTestREST2EthAndMsgPostDeployError(dispatcher *mockREST2EthDispatcher, fr
 	}
 	body, _ := json.Marshal(&bodyMap)
 	req := httptest.NewRequest("POST", "/contracts/"+to+"/set", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req.Header.Add("x-maidenlane-from", from)
 	res := httptest.NewRecorder()
 
 	r, mockRPC, router := newTestREST2EthCustomAbiLoader(dispatcher, abiLoader)
@@ -242,7 +242,7 @@ func TestSendTransactionAsyncSuccess(t *testing.T) {
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
@@ -253,7 +253,7 @@ func TestSendTransactionAsyncSuccess(t *testing.T) {
 	router.ServeHTTP(res, req)
 
 	assert.Equal(202, res.Result().StatusCode)
-	reply := turbokeeperdmessages.AsyncSentMsg{}
+	reply := maidenlanedmessages.AsyncSentMsg{}
 	err := json.NewDecoder(res.Result().Body).Decode(&reply)
 	assert.NoError(err)
 	assert.Equal(true, reply.Sent)
@@ -277,19 +277,19 @@ func TestDeployContractAsyncSuccess(t *testing.T) {
 	bodyMap["s"] = "testing"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
 	}
 	_, _, router, res, _ := newTestREST2EthAndMsg(dispatcher, from, "", bodyMap)
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/abis/abi1?turbokeeperd-privateFrom=0xdC416B907857Fa8c0e0d55ec21766Ee3546D5f90&turbokeeperd-privateFor=0xE7E32f0d5A2D55B2aD27E0C2d663807F28f7c745&turbokeeperd-privateFor=0xB92F8CebA52fFb5F08f870bd355B1d32f0fd9f7C", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req := httptest.NewRequest("POST", "/abis/abi1?maidenlaned-privateFrom=0xdC416B907857Fa8c0e0d55ec21766Ee3546D5f90&maidenlaned-privateFor=0xE7E32f0d5A2D55B2aD27E0C2d663807F28f7c745&maidenlaned-privateFor=0xB92F8CebA52fFb5F08f870bd355B1d32f0fd9f7C", bytes.NewReader(body))
+	req.Header.Add("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(202, res.Result().StatusCode)
-	reply := turbokeeperdmessages.AsyncSentMsg{}
+	reply := maidenlanedmessages.AsyncSentMsg{}
 	err := json.NewDecoder(res.Result().Body).Decode(&reply)
 	assert.NoError(err)
 	assert.Equal(true, reply.Sent)
@@ -312,7 +312,7 @@ func TestDeployContractAsyncHDWallet(t *testing.T) {
 	bodyMap["s"] = "testing"
 	from := "HD-u01234abcd-u01234abcd-12345"
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
@@ -320,11 +320,11 @@ func TestDeployContractAsyncHDWallet(t *testing.T) {
 	_, _, router, res, _ := newTestREST2EthAndMsg(dispatcher, from, "", bodyMap)
 	body, _ := json.Marshal(&bodyMap)
 	req := httptest.NewRequest("POST", "/abis/abi1", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req.Header.Add("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(202, res.Result().StatusCode)
-	reply := turbokeeperdmessages.AsyncSentMsg{}
+	reply := maidenlanedmessages.AsyncSentMsg{}
 	err := json.NewDecoder(res.Result().Body).Decode(&reply)
 	assert.NoError(err)
 	assert.Equal(true, reply.Sent)
@@ -344,7 +344,7 @@ func TestDeployContractAsyncDuplicate(t *testing.T) {
 	bodyMap["s"] = "testing"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
@@ -353,9 +353,9 @@ func TestDeployContractAsyncDuplicate(t *testing.T) {
 	abiLoader := r.gw.(*mockABILoader)
 	abiLoader.nameAvailableError = fmt.Errorf("spent already")
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/abis/abi1?turbokeeperd-privateFrom=0xdC416B907857Fa8c0e0d55ec21766Ee3546D5f90&turbokeeperd-privateFor=0xE7E32f0d5A2D55B2aD27E0C2d663807F28f7c745&turbokeeperd-privateFor=0xB92F8CebA52fFb5F08f870bd355B1d32f0fd9f7C", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
-	req.Header.Add("x-turbokeeper-register", "random")
+	req := httptest.NewRequest("POST", "/abis/abi1?maidenlaned-privateFrom=0xdC416B907857Fa8c0e0d55ec21766Ee3546D5f90&maidenlaned-privateFor=0xE7E32f0d5A2D55B2aD27E0C2d663807F28f7c745&maidenlaned-privateFor=0xB92F8CebA52fFb5F08f870bd355B1d32f0fd9f7C", bytes.NewReader(body))
+	req.Header.Add("x-maidenlane-from", from)
+	req.Header.Add("x-maidenlane-register", "random")
 	router.ServeHTTP(res, req)
 
 	assert.Equal(409, res.Result().StatusCode)
@@ -374,11 +374,11 @@ func TestSendTransactionSyncSuccess(t *testing.T) {
 	bodyMap["s"] = "testing"
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
-	receipt := &turbokeeperdmessages.TransactionReceipt{
-		ReplyCommon: turbokeeperdmessages.ReplyCommon{
-			Headers: turbokeeperdmessages.ReplyHeaders{
-				CommonHeaders: turbokeeperdmessages.CommonHeaders{
-					MsgType: turbokeeperdmessages.MsgTypeTransactionSuccess,
+	receipt := &maidenlanedmessages.TransactionReceipt{
+		ReplyCommon: maidenlanedmessages.ReplyCommon{
+			Headers: maidenlanedmessages.ReplyHeaders{
+				CommonHeaders: maidenlanedmessages.CommonHeaders{
+					MsgType: maidenlanedmessages.MsgTypeTransactionSuccess,
 				},
 			},
 		},
@@ -388,8 +388,8 @@ func TestSendTransactionSyncSuccess(t *testing.T) {
 	}
 	_, _, router, res, _ := newTestREST2EthAndMsg(dispatcher, from, to, bodyMap)
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/contracts/"+to+"/set?turbokeeperd-sync&turbokeeperd-ethvalue=1234", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req := httptest.NewRequest("POST", "/contracts/"+to+"/set?maidenlaned-sync&maidenlaned-ethvalue=1234", bytes.NewReader(body))
+	req.Header.Add("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(json.Number("1234"), dispatcher.sendTransactionMsg.Value)
@@ -409,11 +409,11 @@ func TestSendTransactionSyncFailure(t *testing.T) {
 	bodyMap["s"] = "testing"
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
-	receipt := &turbokeeperdmessages.TransactionReceipt{
-		ReplyCommon: turbokeeperdmessages.ReplyCommon{
-			Headers: turbokeeperdmessages.ReplyHeaders{
-				CommonHeaders: turbokeeperdmessages.CommonHeaders{
-					MsgType: turbokeeperdmessages.MsgTypeTransactionFailure,
+	receipt := &maidenlanedmessages.TransactionReceipt{
+		ReplyCommon: maidenlanedmessages.ReplyCommon{
+			Headers: maidenlanedmessages.ReplyHeaders{
+				CommonHeaders: maidenlanedmessages.CommonHeaders{
+					MsgType: maidenlanedmessages.MsgTypeTransactionFailure,
 				},
 			},
 		},
@@ -423,8 +423,8 @@ func TestSendTransactionSyncFailure(t *testing.T) {
 	}
 	_, _, router, res, _ := newTestREST2EthAndMsg(dispatcher, from, to, bodyMap)
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/contracts/"+to+"/set?turbokeeperd-sync&turbokeeperd-ethvalue=1234", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req := httptest.NewRequest("POST", "/contracts/"+to+"/set?maidenlaned-sync&maidenlaned-ethvalue=1234", bytes.NewReader(body))
+	req.Header.Add("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(json.Number("1234"), dispatcher.sendTransactionMsg.Value)
@@ -445,11 +445,11 @@ func TestSendTransactionSyncPostDeployErr(t *testing.T) {
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	contractAddr := common.HexToAddress("0x0123456789AbcdeF0123456789abCdef01234567")
-	receipt := &turbokeeperdmessages.TransactionReceipt{
-		ReplyCommon: turbokeeperdmessages.ReplyCommon{
-			Headers: turbokeeperdmessages.ReplyHeaders{
-				CommonHeaders: turbokeeperdmessages.CommonHeaders{
-					MsgType: turbokeeperdmessages.MsgTypeTransactionSuccess,
+	receipt := &maidenlanedmessages.TransactionReceipt{
+		ReplyCommon: maidenlanedmessages.ReplyCommon{
+			Headers: maidenlanedmessages.ReplyHeaders{
+				CommonHeaders: maidenlanedmessages.CommonHeaders{
+					MsgType: maidenlanedmessages.MsgTypeTransactionSuccess,
 				},
 			},
 		},
@@ -460,8 +460,8 @@ func TestSendTransactionSyncPostDeployErr(t *testing.T) {
 	}
 	_, _, router, res, _ := newTestREST2EthAndMsgPostDeployError(dispatcher, from, to, bodyMap)
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/contracts/"+to+"/set?turbokeeperd-sync&turbokeeperd-ethvalue=1234", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req := httptest.NewRequest("POST", "/contracts/"+to+"/set?maidenlaned-sync&maidenlaned-ethvalue=1234", bytes.NewReader(body))
+	req.Header.Add("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(json.Number("1234"), dispatcher.sendTransactionMsg.Value)
@@ -483,11 +483,11 @@ func TestSendTransactionSyncViaABISuccess(t *testing.T) {
 	abi := "69a8898a-b6ef-4092-43bf-6cbffac56939"
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
-	receipt := &turbokeeperdmessages.TransactionReceipt{
-		ReplyCommon: turbokeeperdmessages.ReplyCommon{
-			Headers: turbokeeperdmessages.ReplyHeaders{
-				CommonHeaders: turbokeeperdmessages.CommonHeaders{
-					MsgType: turbokeeperdmessages.MsgTypeTransactionSuccess,
+	receipt := &maidenlanedmessages.TransactionReceipt{
+		ReplyCommon: maidenlanedmessages.ReplyCommon{
+			Headers: maidenlanedmessages.ReplyHeaders{
+				CommonHeaders: maidenlanedmessages.CommonHeaders{
+					MsgType: maidenlanedmessages.MsgTypeTransactionSuccess,
 				},
 			},
 		},
@@ -497,8 +497,8 @@ func TestSendTransactionSyncViaABISuccess(t *testing.T) {
 	}
 	_, _, router, res, _ := newTestREST2EthAndMsg(dispatcher, from, to, bodyMap)
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/abis/"+abi+"/"+to+"/set?turbokeeperd-sync&turbokeeperd-ethvalue=1234", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req := httptest.NewRequest("POST", "/abis/"+abi+"/"+to+"/set?maidenlaned-sync&maidenlaned-ethvalue=1234", bytes.NewReader(body))
+	req.Header.Add("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(json.Number("1234"), dispatcher.sendTransactionMsg.Value)
@@ -517,11 +517,11 @@ func TestDeployContractSyncSuccess(t *testing.T) {
 	bodyMap["i"] = 12345
 	bodyMap["s"] = "testing"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
-	receipt := &turbokeeperdmessages.TransactionReceipt{
-		ReplyCommon: turbokeeperdmessages.ReplyCommon{
-			Headers: turbokeeperdmessages.ReplyHeaders{
-				CommonHeaders: turbokeeperdmessages.CommonHeaders{
-					MsgType: turbokeeperdmessages.MsgTypeTransactionSuccess,
+	receipt := &maidenlanedmessages.TransactionReceipt{
+		ReplyCommon: maidenlanedmessages.ReplyCommon{
+			Headers: maidenlanedmessages.ReplyHeaders{
+				CommonHeaders: maidenlanedmessages.CommonHeaders{
+					MsgType: maidenlanedmessages.MsgTypeTransactionSuccess,
 				},
 			},
 		},
@@ -531,8 +531,8 @@ func TestDeployContractSyncSuccess(t *testing.T) {
 	}
 	_, _, router, res, _ := newTestREST2EthAndMsg(dispatcher, from, "", bodyMap)
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/abis/abi1?turbokeeperd-sync", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req := httptest.NewRequest("POST", "/abis/abi1?maidenlaned-sync", bytes.NewReader(body))
+	req.Header.Add("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(200, res.Result().StatusCode)
@@ -549,11 +549,11 @@ func TestDeployContractSyncRemoteRegitryInstance(t *testing.T) {
 	bodyMap["s"] = "testing"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
-	receipt := &turbokeeperdmessages.TransactionReceipt{
-		ReplyCommon: turbokeeperdmessages.ReplyCommon{
-			Headers: turbokeeperdmessages.ReplyHeaders{
-				CommonHeaders: turbokeeperdmessages.CommonHeaders{
-					MsgType: turbokeeperdmessages.MsgTypeTransactionSuccess,
+	receipt := &maidenlanedmessages.TransactionReceipt{
+		ReplyCommon: maidenlanedmessages.ReplyCommon{
+			Headers: maidenlanedmessages.ReplyHeaders{
+				CommonHeaders: maidenlanedmessages.CommonHeaders{
+					MsgType: maidenlanedmessages.MsgTypeTransactionSuccess,
 					Context: map[string]interface{}{
 						remoteRegistryContextKey: true,
 					},
@@ -569,8 +569,8 @@ func TestDeployContractSyncRemoteRegitryInstance(t *testing.T) {
 		deployMsg: newTestDeployMsg(strings.TrimPrefix(to, "0x")),
 	}
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/instances/myinstance/set?turbokeeperd-sync", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req := httptest.NewRequest("POST", "/instances/myinstance/set?maidenlaned-sync", bytes.NewReader(body))
+	req.Header.Add("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(200, res.Result().StatusCode)
@@ -589,7 +589,7 @@ func TestDeployContractSyncRemoteRegitryInstance500(t *testing.T) {
 		err: fmt.Errorf("pop"),
 	}
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/instances/myinstance/set?turbokeeperd-sync", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/instances/myinstance/set?maidenlaned-sync", bytes.NewReader(body))
 	router.ServeHTTP(res, req)
 
 	assert.Equal(500, res.Result().StatusCode)
@@ -604,7 +604,7 @@ func TestDeployContractSyncRemoteRegitryInstance404(t *testing.T) {
 	r, _, router, res, _ := newTestREST2EthAndMsg(&mockREST2EthDispatcher{}, "", "", bodyMap)
 	r.rr = &mockRR{}
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/instances/myinstance/set?turbokeeperd-sync", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/instances/myinstance/set?maidenlaned-sync", bytes.NewReader(body))
 	router.ServeHTTP(res, req)
 
 	assert.Equal(404, res.Result().StatusCode)
@@ -621,7 +621,7 @@ func TestDeployContractSyncRemoteRegitryGateway500(t *testing.T) {
 		err: fmt.Errorf("pop"),
 	}
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/g/mygw?turbokeeperd-sync", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/g/mygw?maidenlaned-sync", bytes.NewReader(body))
 	router.ServeHTTP(res, req)
 
 	assert.Equal(500, res.Result().StatusCode)
@@ -636,7 +636,7 @@ func TestDeployContractSyncRemoteRegitryGateway404(t *testing.T) {
 	r, _, router, res, _ := newTestREST2EthAndMsg(&mockREST2EthDispatcher{}, "", "", bodyMap)
 	r.rr = &mockRR{}
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/g/mygw?turbokeeperd-sync", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", "/g/mygw?maidenlaned-sync", bytes.NewReader(body))
 	router.ServeHTTP(res, req)
 
 	assert.Equal(404, res.Result().StatusCode)
@@ -652,11 +652,11 @@ func TestDeployContractSyncRemoteRegistryGateway(t *testing.T) {
 	bodyMap["s"] = "testing"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
-	receipt := &turbokeeperdmessages.TransactionReceipt{
-		ReplyCommon: turbokeeperdmessages.ReplyCommon{
-			Headers: turbokeeperdmessages.ReplyHeaders{
-				CommonHeaders: turbokeeperdmessages.CommonHeaders{
-					MsgType: turbokeeperdmessages.MsgTypeTransactionSuccess,
+	receipt := &maidenlanedmessages.TransactionReceipt{
+		ReplyCommon: maidenlanedmessages.ReplyCommon{
+			Headers: maidenlanedmessages.ReplyHeaders{
+				CommonHeaders: maidenlanedmessages.CommonHeaders{
+					MsgType: maidenlanedmessages.MsgTypeTransactionSuccess,
 				},
 			},
 		},
@@ -669,8 +669,8 @@ func TestDeployContractSyncRemoteRegistryGateway(t *testing.T) {
 		deployMsg: newTestDeployMsg(strings.TrimPrefix(to, "0x")),
 	}
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/g/mygateway/567a417717cb6c59ddc1035705f02c0fd1ab1872/set?turbokeeperd-sync", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req := httptest.NewRequest("POST", "/g/mygateway/567a417717cb6c59ddc1035705f02c0fd1ab1872/set?maidenlaned-sync", bytes.NewReader(body))
+	req.Header.Add("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(200, res.Result().StatusCode)
@@ -692,7 +692,7 @@ func TestSendTransactionSyncFail(t *testing.T) {
 		sendTransactionSyncError: fmt.Errorf("pop"),
 	}
 	_, _, router, res, req := newTestREST2EthAndMsg(dispatcher, from, to, bodyMap)
-	req.Header.Set("x-turbokeeper-sync", "true")
+	req.Header.Set("x-maidenlane-sync", "true")
 	router.ServeHTTP(res, req)
 
 	assert.Equal(500, res.Result().StatusCode)
@@ -740,7 +740,7 @@ func TestDeployContractAsyncFail(t *testing.T) {
 	_, _, router, res, _ := newTestREST2EthAndMsg(dispatcher, from, "", bodyMap)
 	body, _ := json.Marshal(&bodyMap)
 	req := httptest.NewRequest("POST", "/abis/abi1", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req.Header.Add("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(500, res.Result().StatusCode)
@@ -838,7 +838,7 @@ func TestSendTransactionMissingContract(t *testing.T) {
 	reply := restErrMsg{}
 	err := json.NewDecoder(res.Result().Body).Decode(&reply)
 	assert.NoError(err)
-	assert.Equal("Please specify a valid address in the 'turbokeeperd-from' query string parameter or x-turbokeeper-from HTTP header", reply.Message)
+	assert.Equal("Please specify a valid address in the 'maidenlaned-from' query string parameter or x-maidenlane-from HTTP header", reply.Message)
 }
 
 func TestSendTransactionBadMethodABI(t *testing.T) {
@@ -846,16 +846,16 @@ func TestSendTransactionBadMethodABI(t *testing.T) {
 	dir := tempdir()
 	defer cleanup(dir)
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
 	}
 	abiLoader := &mockABILoader{
-		deployMsg: &turbokeeperdmessages.DeployContract{
-			ABI: turbokeeperdbind.ABIMarshaling{
+		deployMsg: &maidenlanedmessages.DeployContract{
+			ABI: maidenlanedbind.ABIMarshaling{
 				{
-					Name: "badmethod", Type: "function", Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
+					Name: "badmethod", Type: "function", Inputs: []maidenlanedbind.ABIArgumentMarshaling{
 						{Name: "badness", Type: "badness"},
 					},
 				},
@@ -864,7 +864,7 @@ func TestSendTransactionBadMethodABI(t *testing.T) {
 	}
 	_, _, router := newTestREST2EthCustomAbiLoader(dispatcher, abiLoader)
 	req := httptest.NewRequest("GET", "/contracts/0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8/badmethod", bytes.NewReader([]byte{}))
-	req.Header.Add("x-turbokeeper-from", "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8")
+	req.Header.Add("x-maidenlane-from", "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8")
 	res := httptest.NewRecorder()
 	router.ServeHTTP(res, req)
 	assert.Equal(400, res.Result().StatusCode)
@@ -879,16 +879,16 @@ func TestSendTransactionBadEventABI(t *testing.T) {
 	dir := tempdir()
 	defer cleanup(dir)
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
 	}
 	abiLoader := &mockABILoader{
-		deployMsg: &turbokeeperdmessages.DeployContract{
-			ABI: turbokeeperdbind.ABIMarshaling{
+		deployMsg: &maidenlanedmessages.DeployContract{
+			ABI: maidenlanedbind.ABIMarshaling{
 				{
-					Name: "badevent", Type: "event", Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
+					Name: "badevent", Type: "event", Inputs: []maidenlanedbind.ABIArgumentMarshaling{
 						{Name: "badness", Type: "badness"},
 					},
 				},
@@ -897,7 +897,7 @@ func TestSendTransactionBadEventABI(t *testing.T) {
 	}
 	_, _, router := newTestREST2EthCustomAbiLoader(dispatcher, abiLoader)
 	req := httptest.NewRequest("POST", "/contracts/0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8/badevent/subscribe", bytes.NewReader([]byte{}))
-	req.Header.Add("x-turbokeeper-from", "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8")
+	req.Header.Add("x-maidenlane-from", "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8")
 	res := httptest.NewRecorder()
 	router.ServeHTTP(res, req)
 	assert.Equal(400, res.Result().StatusCode)
@@ -912,16 +912,16 @@ func TestSendTransactionBadConstructorABI(t *testing.T) {
 	dir := tempdir()
 	defer cleanup(dir)
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
 	}
 	abiLoader := &mockABILoader{
-		deployMsg: &turbokeeperdmessages.DeployContract{
-			ABI: turbokeeperdbind.ABIMarshaling{
+		deployMsg: &maidenlanedmessages.DeployContract{
+			ABI: maidenlanedbind.ABIMarshaling{
 				{
-					Name: "badevent", Type: "constructor", Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
+					Name: "badevent", Type: "constructor", Inputs: []maidenlanedbind.ABIArgumentMarshaling{
 						{Name: "badness", Type: "badness"},
 					},
 				},
@@ -930,7 +930,7 @@ func TestSendTransactionBadConstructorABI(t *testing.T) {
 	}
 	_, _, router := newTestREST2EthCustomAbiLoader(dispatcher, abiLoader)
 	req := httptest.NewRequest("POST", "/abis/testabi", bytes.NewReader([]byte{}))
-	req.Header.Add("x-turbokeeper-from", "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8")
+	req.Header.Add("x-maidenlane-from", "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8")
 	res := httptest.NewRecorder()
 	router.ServeHTTP(res, req)
 	assert.Equal(400, res.Result().StatusCode)
@@ -945,19 +945,19 @@ func TestSendTransactionDefaultConstructorABI(t *testing.T) {
 	dir := tempdir()
 	defer cleanup(dir)
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
 	}
 	abiLoader := &mockABILoader{
-		deployMsg: &turbokeeperdmessages.DeployContract{
-			ABI: turbokeeperdbind.ABIMarshaling{}, // completely empty ABI is ok
+		deployMsg: &maidenlanedmessages.DeployContract{
+			ABI: maidenlanedbind.ABIMarshaling{}, // completely empty ABI is ok
 		},
 	}
 	_, _, router := newTestREST2EthCustomAbiLoader(dispatcher, abiLoader)
 	req := httptest.NewRequest("POST", "/abis/testabi", bytes.NewReader([]byte{}))
-	req.Header.Add("x-turbokeeper-from", "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8")
+	req.Header.Add("x-maidenlane-from", "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8")
 	res := httptest.NewRecorder()
 	router.ServeHTTP(res, req)
 	assert.Equal(202, res.Result().StatusCode)
@@ -968,16 +968,16 @@ func TestSendTransactionUnnamedParamsABI(t *testing.T) {
 	dir := tempdir()
 	defer cleanup(dir)
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
 	}
 	abiLoader := &mockABILoader{
-		deployMsg: &turbokeeperdmessages.DeployContract{
-			ABI: turbokeeperdbind.ABIMarshaling{
+		deployMsg: &maidenlanedmessages.DeployContract{
+			ABI: maidenlanedbind.ABIMarshaling{
 				{
-					Name: "unnamedparamsmethod", Type: "function", Inputs: []turbokeeperdbind.ABIArgumentMarshaling{
+					Name: "unnamedparamsmethod", Type: "function", Inputs: []maidenlanedbind.ABIArgumentMarshaling{
 						{Name: "", Type: "uint256", InternalType: "uint256"},
 						{Name: "", Type: "uint256", InternalType: "uint256"},
 					},
@@ -987,7 +987,7 @@ func TestSendTransactionUnnamedParamsABI(t *testing.T) {
 	}
 	_, _, router := newTestREST2EthCustomAbiLoader(dispatcher, abiLoader)
 	req := httptest.NewRequest("POST", "/abis/testabi/0x29fb3f4f7cc82a1456903a506e88cdd63b1d74e8/unnamedparamsmethod", bytes.NewReader([]byte{}))
-	req.Header.Add("x-turbokeeper-from", "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8")
+	req.Header.Add("x-maidenlane-from", "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8")
 	q := req.URL.Query()
 	q.Add("input", "105")
 	q.Add("input1", "106")
@@ -1030,7 +1030,7 @@ func TestSendTransactionInvalidContract(t *testing.T) {
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
@@ -1057,15 +1057,15 @@ func TestDeployContractInvalidABI(t *testing.T) {
 	bodyMap["s"] = "testing"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
 	}
 	r, _, router, res, _ := newTestREST2EthAndMsg(dispatcher, from, "", bodyMap)
 	body, _ := json.Marshal(&bodyMap)
-	req := httptest.NewRequest("POST", "/abis/abi1?turbokeeperd-sync", bytes.NewReader(body))
-	req.Header.Add("x-turbokeeper-from", from)
+	req := httptest.NewRequest("POST", "/abis/abi1?maidenlaned-sync", bytes.NewReader(body))
+	req.Header.Add("x-maidenlane-from", from)
 	abiLoader := r.gw.(*mockABILoader)
 	abiLoader.loadABIError = fmt.Errorf("pop")
 	router.ServeHTTP(res, req)
@@ -1087,14 +1087,14 @@ func TestSendTransactionInvalidMethod(t *testing.T) {
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
 	}
 	_, _, router, res, _ := newTestREST2EthAndMsg(dispatcher, from, to, bodyMap)
 	req := httptest.NewRequest("POST", "/contracts/"+to+"/shazaam", bytes.NewReader([]byte("{}")))
-	req.Header.Set("x-turbokeeper-from", from)
+	req.Header.Set("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(404, res.Result().StatusCode)
@@ -1113,14 +1113,14 @@ func TestSendTransactionParamInQuery(t *testing.T) {
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
 	}
 	_, _, router, res, _ := newTestREST2EthAndMsg(dispatcher, from, to, bodyMap)
-	req := httptest.NewRequest("POST", "/contracts/"+to+"/set?i=999&s=msg&turbokeeperd-ethvalue=12345", bytes.NewReader([]byte("{}")))
-	req.Header.Set("x-turbokeeper-from", from)
+	req := httptest.NewRequest("POST", "/contracts/"+to+"/set?i=999&s=msg&maidenlaned-ethvalue=12345", bytes.NewReader([]byte("{}")))
+	req.Header.Set("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(202, res.Result().StatusCode)
@@ -1135,7 +1135,7 @@ func TestSendTransactionRegisteredName(t *testing.T) {
 	to := "transponster"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
@@ -1143,8 +1143,8 @@ func TestSendTransactionRegisteredName(t *testing.T) {
 	r, _, router, res, _ := newTestREST2EthAndMsg(dispatcher, from, to, bodyMap)
 	abiLoader := r.gw.(*mockABILoader)
 	abiLoader.registeredContractAddr = "c6c572a18d31ff36d661d680c0060307e038dc47"
-	req := httptest.NewRequest("POST", "/contracts/"+to+"/set?i=999&s=msg&turbokeeperd-ethvalue=12345", bytes.NewReader([]byte("{}")))
-	req.Header.Set("x-turbokeeper-from", from)
+	req := httptest.NewRequest("POST", "/contracts/"+to+"/set?i=999&s=msg&maidenlaned-ethvalue=12345", bytes.NewReader([]byte("{}")))
+	req.Header.Set("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal("c6c572a18d31ff36d661d680c0060307e038dc47", abiLoader.capturedAddr)
@@ -1159,7 +1159,7 @@ func TestSendTransactionMissingParam(t *testing.T) {
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
@@ -1183,14 +1183,14 @@ func TestSendTransactionBadBody(t *testing.T) {
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	from := "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	dispatcher := &mockREST2EthDispatcher{
-		asyncDispatchReply: &turbokeeperdmessages.AsyncSentMsg{
+		asyncDispatchReply: &maidenlanedmessages.AsyncSentMsg{
 			Sent:    true,
 			Request: "request1",
 		},
 	}
 	_, _, router, res, _ := newTestREST2EthAndMsg(dispatcher, from, to, bodyMap)
 	req := httptest.NewRequest("POST", "/contracts/"+to+"/set?x=999", bytes.NewReader([]byte(":not json or yaml")))
-	req.Header.Set("x-turbokeeper-from", from)
+	req.Header.Set("x-maidenlane-from", from)
 	router.ServeHTTP(res, req)
 
 	assert.Equal(400, res.Result().StatusCode)
@@ -1236,7 +1236,7 @@ func TestCallMethodHDWalletSuccess(t *testing.T) {
 	from := "HD-u01234abcd-u01234abcd-12345"
 	r, mockRPC, router, res, _ := newTestREST2EthAndMsg(dispatcher, "", to, map[string]interface{}{})
 	r.processor.(*mockProcessor).resolvedFrom = "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
-	req := httptest.NewRequest("GET", "/contracts/"+to+"/get?turbokeeperd-from="+from, bytes.NewReader([]byte{}))
+	req := httptest.NewRequest("GET", "/contracts/"+to+"/get?maidenlaned-from="+from, bytes.NewReader([]byte{}))
 	mockRPC.result = "0x000000000000000000000000000000000000000000000000000000000001e2400000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000774657374696e6700000000000000000000000000000000000000000000000000"
 	router.ServeHTTP(res, req)
 
@@ -1264,7 +1264,7 @@ func TestCallMethodHDWalletFail(t *testing.T) {
 	r, mockRPC, router, res, _ := newTestREST2EthAndMsg(dispatcher, "", to, map[string]interface{}{})
 	r.processor.(*mockProcessor).resolvedFrom = "0x66c5fe653e7a9ebb628a6d40f0452d1e358baee8"
 	r.processor.(*mockProcessor).err = fmt.Errorf("pop")
-	req := httptest.NewRequest("GET", "/contracts/"+to+"/get?turbokeeperd-from="+from, bytes.NewReader([]byte{}))
+	req := httptest.NewRequest("GET", "/contracts/"+to+"/get?maidenlaned-from="+from, bytes.NewReader([]byte{}))
 	mockRPC.result = "0x000000000000000000000000000000000000000000000000000000000001e2400000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000774657374696e6700000000000000000000000000000000000000000000000000"
 	router.ServeHTTP(res, req)
 
@@ -1283,7 +1283,7 @@ func TestCallReadOnlyMethodViaPOSTSuccess(t *testing.T) {
 	to := "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	dispatcher := &mockREST2EthDispatcher{}
 	_, mockRPC, router, res, _ := newTestREST2EthAndMsg(dispatcher, "", to, map[string]interface{}{})
-	req := httptest.NewRequest("POST", "/contracts/"+to+"/get?turbokeeperd-blocknumber=12345", bytes.NewReader([]byte{}))
+	req := httptest.NewRequest("POST", "/contracts/"+to+"/get?maidenlaned-blocknumber=12345", bytes.NewReader([]byte{}))
 	mockRPC.result = "0x000000000000000000000000000000000000000000000000000000000001e2400000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000774657374696e6700000000000000000000000000000000000000000000000000"
 	router.ServeHTTP(res, req)
 
@@ -1301,7 +1301,7 @@ func TestCallReadOnlyMethodViaPOSTSuccess(t *testing.T) {
 	to = "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	dispatcher = &mockREST2EthDispatcher{}
 	_, mockRPC, router, res, _ = newTestREST2EthAndMsg(dispatcher, "", to, map[string]interface{}{})
-	req = httptest.NewRequest("POST", "/contracts/"+to+"/get?turbokeeperd-blocknumber=0xab1234", bytes.NewReader([]byte{}))
+	req = httptest.NewRequest("POST", "/contracts/"+to+"/get?maidenlaned-blocknumber=0xab1234", bytes.NewReader([]byte{}))
 	mockRPC.result = "0x000000000000000000000000000000000000000000000000000000000001e2400000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000774657374696e6700000000000000000000000000000000000000000000000000"
 	router.ServeHTTP(res, req)
 	assert.Equal(200, res.Result().StatusCode)
@@ -1311,7 +1311,7 @@ func TestCallReadOnlyMethodViaPOSTSuccess(t *testing.T) {
 	to = "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	dispatcher = &mockREST2EthDispatcher{}
 	_, mockRPC, router, res, _ = newTestREST2EthAndMsg(dispatcher, "", to, map[string]interface{}{})
-	req = httptest.NewRequest("POST", "/contracts/"+to+"/get?turbokeeperd-blocknumber=pending", bytes.NewReader([]byte{}))
+	req = httptest.NewRequest("POST", "/contracts/"+to+"/get?maidenlaned-blocknumber=pending", bytes.NewReader([]byte{}))
 	mockRPC.result = "0x000000000000000000000000000000000000000000000000000000000001e2400000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000774657374696e6700000000000000000000000000000000000000000000000000"
 	router.ServeHTTP(res, req)
 	assert.Equal(200, res.Result().StatusCode)
@@ -1341,7 +1341,7 @@ func TestCallMethodFail(t *testing.T) {
 	to = "0x567a417717cb6c59ddc1035705f02c0fd1ab1872"
 	dispatcher = &mockREST2EthDispatcher{}
 	_, mockRPC, router, res, _ = newTestREST2EthAndMsg(dispatcher, "", to, map[string]interface{}{})
-	req = httptest.NewRequest("POST", "/contracts/"+to+"/get?turbokeeperd-blocknumber=ab1234", bytes.NewReader([]byte{}))
+	req = httptest.NewRequest("POST", "/contracts/"+to+"/get?maidenlaned-blocknumber=ab1234", bytes.NewReader([]byte{}))
 	mockRPC.result = "0x000000000000000000000000000000000000000000000000000000000001e2400000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000774657374696e6700000000000000000000000000000000000000000000000000"
 	router.ServeHTTP(res, req)
 	assert.Equal(500, res.Result().StatusCode)
@@ -1412,7 +1412,7 @@ func TestSubscribeUnauthorized(t *testing.T) {
 	dir := tempdir()
 	defer cleanup(dir)
 
-	turbokeeperdauth.RegisterSecurityModule(&turbokeeperdauthtest.TestSecurityModule{})
+	maidenlanedauth.RegisterSecurityModule(&maidenlanedauthtest.TestSecurityModule{})
 
 	dispatcher := &mockREST2EthDispatcher{}
 	_, _, router := newTestREST2Eth(dispatcher)
@@ -1429,7 +1429,7 @@ func TestSubscribeUnauthorized(t *testing.T) {
 	assert.NoError(err)
 	assert.Equal("Unauthorized", reply.Message)
 
-	turbokeeperdauth.RegisterSecurityModule(nil)
+	maidenlanedauth.RegisterSecurityModule(nil)
 }
 
 func TestSubscribeNoAddressMissingStream(t *testing.T) {
@@ -1460,7 +1460,7 @@ func TestSubscribeNoAddressSuccess(t *testing.T) {
 	dispatcher := &mockREST2EthDispatcher{}
 	r, _, router := newTestREST2Eth(dispatcher)
 	sm := &mockSubMgr{
-		sub: &turbokeeperdevents.SubscriptionInfo{ID: "sub1", Name: "stream-without-address"},
+		sub: &maidenlanedevents.SubscriptionInfo{ID: "sub1", Name: "stream-without-address"},
 	}
 	r.subMgr = sm
 	bodyBytes, _ := json.Marshal(&map[string]string{
@@ -1471,7 +1471,7 @@ func TestSubscribeNoAddressSuccess(t *testing.T) {
 	router.ServeHTTP(res, req)
 
 	assert.Equal(200, res.Result().StatusCode)
-	reply := turbokeeperdevents.SubscriptionInfo{}
+	reply := maidenlanedevents.SubscriptionInfo{}
 	err := json.NewDecoder(res.Result().Body).Decode(&reply)
 	assert.NoError(err)
 	assert.Equal("sub1", reply.ID)
@@ -1487,7 +1487,7 @@ func TestSubscribeWithAddressSuccess(t *testing.T) {
 	dispatcher := &mockREST2EthDispatcher{}
 	r, _, router := newTestREST2Eth(dispatcher)
 	sm := &mockSubMgr{
-		sub: &turbokeeperdevents.SubscriptionInfo{ID: "sub1"},
+		sub: &maidenlanedevents.SubscriptionInfo{ID: "sub1"},
 	}
 	r.subMgr = sm
 	bodyBytes, _ := json.Marshal(&map[string]string{
@@ -1498,7 +1498,7 @@ func TestSubscribeWithAddressSuccess(t *testing.T) {
 	router.ServeHTTP(res, req)
 
 	assert.Equal(200, res.Result().StatusCode)
-	reply := turbokeeperdevents.SubscriptionInfo{}
+	reply := maidenlanedevents.SubscriptionInfo{}
 	err := json.NewDecoder(res.Result().Body).Decode(&reply)
 	assert.NoError(err)
 	assert.Equal("sub1", reply.ID)
@@ -1515,7 +1515,7 @@ func TestSubscribeWithAddressBadAddress(t *testing.T) {
 	abiLoader := r.gw.(*mockABILoader)
 	abiLoader.resolveContractErr = fmt.Errorf("unregistered")
 	r.subMgr = &mockSubMgr{
-		sub: &turbokeeperdevents.SubscriptionInfo{ID: "sub1"},
+		sub: &maidenlanedevents.SubscriptionInfo{ID: "sub1"},
 	}
 	bodyBytes, _ := json.Marshal(&map[string]string{
 		"stream": "stream1",

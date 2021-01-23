@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdcontracts
+package maidenlanedcontracts
 
 import (
 	"encoding/hex"
@@ -20,11 +20,11 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdkvstore"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedkvstore"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -40,13 +40,13 @@ const (
 )
 
 type deployContractWithAddress struct {
-	turbokeeperdmessages.DeployContract
+	maidenlanedmessages.DeployContract
 	Address string `json:"address"`
 }
 
 // RemoteRegistry lookup of ABI, ByteCode and DevDocs against a conformant REST API
 type RemoteRegistry interface {
-	loadFactoryForGateway(lookupStr string, refresh bool) (*turbokeeperdmessages.DeployContract, error)
+	loadFactoryForGateway(lookupStr string, refresh bool) (*maidenlanedmessages.DeployContract, error)
 	loadFactoryForInstance(lookupStr string, refresh bool) (*deployContractWithAddress, error)
 	registerInstance(lookupStr, address string) error
 	init() error
@@ -55,7 +55,7 @@ type RemoteRegistry interface {
 
 // RemoteRegistryConf configuration
 type RemoteRegistryConf struct {
-	turbokeeperdutils.HTTPRequesterConf
+	maidenlanedutils.HTTPRequesterConf
 	CacheDB           string                      `json:"cacheDB"`
 	GatewayURLPrefix  string                      `json:"gatewayURLPrefix"`
 	InstanceURLPrefix string                      `json:"instanceURLPrefix"`
@@ -77,7 +77,7 @@ type RemoteRegistryPropNamesConf struct {
 func NewRemoteRegistry(conf *RemoteRegistryConf) RemoteRegistry {
 	rr := &remoteRegistry{
 		conf: conf,
-		hr:   turbokeeperdutils.NewHTTPRequester("Contract registry", &conf.HTTPRequesterConf),
+		hr:   maidenlanedutils.NewHTTPRequester("Contract registry", &conf.HTTPRequesterConf),
 	}
 	propNames := &conf.PropNames
 	if propNames.ID == "" {
@@ -112,14 +112,14 @@ func NewRemoteRegistry(conf *RemoteRegistryConf) RemoteRegistry {
 
 type remoteRegistry struct {
 	conf *RemoteRegistryConf
-	hr   *turbokeeperdutils.HTTPRequester
-	db   turbokeeperdkvstore.KVStore
+	hr   *maidenlanedutils.HTTPRequester
+	db   maidenlanedkvstore.KVStore
 }
 
 func (rr *remoteRegistry) init() (err error) {
 	if rr.conf.CacheDB != "" {
-		if rr.db, err = turbokeeperdkvstore.NewLDBKeyValueStore(rr.conf.CacheDB); err != nil {
-			return turbokeeperderrors.Errorf(turbokeeperderrors.RemoteRegistryCacheInit, err)
+		if rr.db, err = maidenlanedkvstore.NewLDBKeyValueStore(rr.conf.CacheDB); err != nil {
+			return maidenlanederrors.Errorf(maidenlanederrors.RemoteRegistryCacheInit, err)
 		}
 	}
 	return nil
@@ -146,11 +146,11 @@ func (rr *remoteRegistry) loadFactoryFromURL(baseURL, ns, lookupStr string, refr
 	if err != nil {
 		return nil, err
 	}
-	var abi turbokeeperdbind.ABIMarshaling
+	var abi maidenlanedbind.ABIMarshaling
 	err = json.Unmarshal([]byte(abiString), &abi)
 	if err != nil {
 		log.Errorf("GET %s <-- !Failed to decode ABI: %s\n%s", queryURL, err, abiString)
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.RemoteRegistryLookupGenericProcessingFailed)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.RemoteRegistryLookupGenericProcessingFailed)
 	}
 	devdoc, err := rr.hr.GetResponseString(jsonRes, rr.conf.PropNames.Devdoc, true)
 	if err != nil {
@@ -163,15 +163,15 @@ func (rr *remoteRegistry) loadFactoryFromURL(baseURL, ns, lookupStr string, refr
 	var bytecode []byte
 	if bytecode, err = hex.DecodeString(strings.TrimPrefix(bytecodeStr, "0x")); err != nil {
 		log.Errorf("GET %s <-- !Failed to parse bytecode: %s\n%s", queryURL, err, bytecodeStr)
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.RemoteRegistryLookupGenericProcessingFailed)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.RemoteRegistryLookupGenericProcessingFailed)
 	}
 	addr, _ := rr.hr.GetResponseString(jsonRes, rr.conf.PropNames.Address, false)
 	msg = &deployContractWithAddress{
-		DeployContract: turbokeeperdmessages.DeployContract{
-			TransactionCommon: turbokeeperdmessages.TransactionCommon{
-				RequestCommon: turbokeeperdmessages.RequestCommon{
-					Headers: turbokeeperdmessages.RequestHeaders{
-						CommonHeaders: turbokeeperdmessages.CommonHeaders{
+		DeployContract: maidenlanedmessages.DeployContract{
+			TransactionCommon: maidenlanedmessages.TransactionCommon{
+				RequestCommon: maidenlanedmessages.RequestCommon{
+					Headers: maidenlanedmessages.RequestHeaders{
+						CommonHeaders: maidenlanedmessages.CommonHeaders{
 							ID: idString,
 							Context: map[string]interface{}{
 								remoteRegistryContextKey: true,
@@ -218,7 +218,7 @@ func (rr *remoteRegistry) storeFactoryToCacheDB(cacheKey string, msg *deployCont
 	}
 }
 
-func (rr *remoteRegistry) loadFactoryForGateway(lookupStr string, refresh bool) (*turbokeeperdmessages.DeployContract, error) {
+func (rr *remoteRegistry) loadFactoryForGateway(lookupStr string, refresh bool) (*maidenlanedmessages.DeployContract, error) {
 	if rr.conf.GatewayURLPrefix == "" {
 		return nil, nil
 	}
@@ -239,7 +239,7 @@ func (rr *remoteRegistry) loadFactoryForInstance(lookupStr string, refresh bool)
 
 func (rr *remoteRegistry) registerInstance(lookupStr, address string) error {
 	if rr.conf.InstanceURLPrefix == "" {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.RemoteRegistryNotConfigured)
+		return maidenlanederrors.Errorf(maidenlanederrors.RemoteRegistryNotConfigured)
 	}
 	safeLookupStr := url.QueryEscape(lookupStr)
 	requestURL := strings.TrimSuffix(rr.conf.InstanceURLPrefix, "/")
@@ -249,7 +249,7 @@ func (rr *remoteRegistry) registerInstance(lookupStr, address string) error {
 	log.Debugf("Registering contract: %+v", bodyMap)
 	_, err := rr.hr.DoRequest("POST", requestURL, bodyMap)
 	if err != nil {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.RemoteRegistryRegistrationFailed, err)
+		return maidenlanederrors.Errorf(maidenlanederrors.RemoteRegistryRegistrationFailed, err)
 	}
 	return nil
 }

@@ -17,9 +17,9 @@ package cmd
 import (
 	"plugin"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperauth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeepererrors"
-	"github.com/freight-trust/zeroxyz/pkg/turbokeeperplugins"
+	"github.com/freight-trust/zeroxyz/internal/maidenlaneauth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlaneerrors"
+	"github.com/freight-trust/zeroxyz/pkg/maidenlaneplugins"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,14 +45,14 @@ func loadSecurityModulePlugin(conf *PluginConfig) error {
 	log.Debugf("Loading SecurityModule plugin '%s'", modulePath)
 	smPlugin, err := plugin.Open(modulePath)
 	if err != nil {
-		return turbokeepererrors.Errorf(turbokeepererrors.SecurityModulePluginLoad, err)
+		return maidenlaneerrors.Errorf(maidenlaneerrors.SecurityModulePluginLoad, err)
 	}
 
 	smSymbol, err := smPlugin.Lookup("SecurityModule")
 	if err != nil || smSymbol == nil {
-		return turbokeepererrors.Errorf(turbokeepererrors.SecurityModulePluginSymbol, modulePath, err)
+		return maidenlaneerrors.Errorf(maidenlaneerrors.SecurityModulePluginSymbol, modulePath, err)
 	}
 
-	turbokeeperauth.RegisterSecurityModule(*smSymbol.(*turbokeeperplugins.SecurityModule))
+	maidenlaneauth.RegisterSecurityModule(*smSymbol.(*maidenlaneplugins.SecurityModule))
 	return nil
 }

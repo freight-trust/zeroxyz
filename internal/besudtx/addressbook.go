@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdtx
+package maidenlanedtx
 
 import (
 	"context"
@@ -21,9 +21,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,12 +34,12 @@ const (
 // AddressBook looks up RPC URLs based on a remote registry, and optionally
 // resolves hostnames to IP addresses using a hosts file
 type AddressBook interface {
-	lookup(ctx context.Context, addr string) (turbokeeperdeth.RPCClient, error)
+	lookup(ctx context.Context, addr string) (maidenlanedeth.RPCClient, error)
 }
 
 // AddressBookConf configuration
 type AddressBookConf struct {
-	turbokeeperdutils.HTTPRequesterConf
+	maidenlanedutils.HTTPRequesterConf
 	AddressbookURLPrefix string                   `json:"urlPrefix"`
 	HostsFile            string                   `json:"hostsFile"`
 	PropNames            AddressBookPropNamesConf `json:"propNames"`
@@ -51,13 +51,13 @@ type AddressBookPropNamesConf struct {
 }
 
 // NewAddressBook construtor
-func NewAddressBook(conf *AddressBookConf, rpcConf *turbokeeperdeth.RPCConf) AddressBook {
+func NewAddressBook(conf *AddressBookConf, rpcConf *maidenlanedeth.RPCConf) AddressBook {
 	ab := &addressBook{
 		conf:                conf,
 		fallbackRPCEndpoint: rpcConf.RPC.URL,
-		hr:                  turbokeeperdutils.NewHTTPRequester("Addressbook", &conf.HTTPRequesterConf),
+		hr:                  maidenlanedutils.NewHTTPRequester("Addressbook", &conf.HTTPRequesterConf),
 		addrToHost:          make(map[string]string),
-		hostToRPC:           make(map[string]turbokeeperdeth.RPCClientAll),
+		hostToRPC:           make(map[string]maidenlanedeth.RPCClientAll),
 	}
 	propNames := &conf.PropNames
 	if propNames.RPCEndpoint == "" {
@@ -71,15 +71,15 @@ func NewAddressBook(conf *AddressBookConf, rpcConf *turbokeeperdeth.RPCConf) Add
 
 type addressBook struct {
 	conf                *AddressBookConf
-	hr                  *turbokeeperdutils.HTTPRequester
+	hr                  *maidenlanedutils.HTTPRequester
 	mtx                 sync.Mutex
 	fallbackRPCEndpoint string
 	addrToHost          map[string]string
-	hostToRPC           map[string]turbokeeperdeth.RPCClientAll
+	hostToRPC           map[string]maidenlanedeth.RPCClientAll
 }
 
 // testRPC uses a simple net_version JSON/RPC call to test the health of a cached connection
-func (ab *addressBook) testRPC(ctx context.Context, rpc turbokeeperdeth.RPCClient) bool {
+func (ab *addressBook) testRPC(ctx context.Context, rpc maidenlanedeth.RPCClient) bool {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -96,14 +96,14 @@ func (ab *addressBook) resolveHost(endpoint string) (*url.URL, error) {
 	url, err := url.Parse(endpoint)
 	if err != nil {
 		log.Errorf("Invalid URL '%s': %s", endpoint, err)
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.AddressBookLookupBadURL)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.AddressBookLookupBadURL)
 	}
 
 	if ab.conf.HostsFile != "" {
-		hostsMap, err := turbokeeperdutils.ParseHosts(ab.conf.HostsFile)
+		hostsMap, err := maidenlanedutils.ParseHosts(ab.conf.HostsFile)
 		if err != nil {
 			log.Errorf("Failed to parse hosts file: %s", err)
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.AddressBookLookupBadHostsFile)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.AddressBookLookupBadHostsFile)
 		}
 		splitHostPort := strings.Split(url.Host, ":")
 		if mappedHost, ok := hostsMap[splitHostPort[0]]; ok && mappedHost != "" {
@@ -119,7 +119,7 @@ func (ab *addressBook) resolveHost(endpoint string) (*url.URL, error) {
 
 // mapEndpoint takes an RPC connect endpoint (prior to host resolution) and maps
 // it to a cached RPC connection. Or creates a new connection and caches it.
-func (ab *addressBook) mapEndpoint(ctx context.Context, endpoint string) (turbokeeperdeth.RPCClient, error) {
+func (ab *addressBook) mapEndpoint(ctx context.Context, endpoint string) (maidenlanedeth.RPCClient, error) {
 
 	// Simple locking on our cache for now (covers long-lived async test+connect operations)
 	ab.mtx.Lock()
@@ -143,7 +143,7 @@ func (ab *addressBook) mapEndpoint(ctx context.Context, endpoint string) (turbok
 	}
 
 	// Connect and cache the RPC connection
-	if rpc, err = turbokeeperdeth.RPCConnect(&turbokeeperdeth.RPCConnOpts{
+	if rpc, err = maidenlanedeth.RPCConnect(&maidenlanedeth.RPCConnOpts{
 		URL: url.String(),
 	}); err != nil {
 		return nil, err
@@ -154,7 +154,7 @@ func (ab *addressBook) mapEndpoint(ctx context.Context, endpoint string) (turbok
 
 // lookup the RPC URL to use for a given from address, performing hostname resolution
 // based on a custom hosts file (if configured)
-func (ab *addressBook) lookup(ctx context.Context, fromAddr string) (turbokeeperdeth.RPCClient, error) {
+func (ab *addressBook) lookup(ctx context.Context, fromAddr string) (maidenlanedeth.RPCClient, error) {
 	// First check if we already know the base (non host translated) endpoint
 	// to use for this address
 	log.Infof("Resolving signing address: %s", fromAddr)
@@ -167,7 +167,7 @@ func (ab *addressBook) lookup(ctx context.Context, fromAddr string) (turbokeeper
 		}
 		if body == nil {
 			if ab.fallbackRPCEndpoint == "" {
-				return nil, turbokeeperderrors.Errorf(turbokeeperderrors.AddressBookLookupNotFound)
+				return nil, maidenlanederrors.Errorf(maidenlanederrors.AddressBookLookupNotFound)
 			}
 			endpoint = ab.fallbackRPCEndpoint
 		} else {

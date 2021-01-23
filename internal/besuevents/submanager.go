@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdevents
+package maidenlanedevents
 
 import (
 	"context"
@@ -23,12 +23,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdkvstore"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedkvstore"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
 	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -53,7 +53,7 @@ type SubscriptionManager interface {
 	SuspendStream(ctx context.Context, id string) error
 	ResumeStream(ctx context.Context, id string) error
 	DeleteStream(ctx context.Context, id string) error
-	AddSubscription(ctx context.Context, addr *turbokeeperdbind.Address, event *turbokeeperdbind.ABIElementMarshaling, streamID, initialBlock, name string) (*SubscriptionInfo, error)
+	AddSubscription(ctx context.Context, addr *maidenlanedbind.Address, event *maidenlanedbind.ABIElementMarshaling, streamID, initialBlock, name string) (*SubscriptionInfo, error)
 	Subscriptions(ctx context.Context) []*SubscriptionInfo
 	SubscriptionByID(ctx context.Context, id string) (*SubscriptionInfo, error)
 	ResetSubscription(ctx context.Context, id, initialBlock string) error
@@ -79,9 +79,9 @@ type SubscriptionManagerConf struct {
 
 type subscriptionMGR struct {
 	conf          *SubscriptionManagerConf
-	rpcConf       *turbokeeperdeth.RPCConnOpts
-	db            turbokeeperdkvstore.KVStore
-	rpc           turbokeeperdeth.RPCClient
+	rpcConf       *maidenlanedeth.RPCConnOpts
+	db            maidenlanedkvstore.KVStore
+	rpc           maidenlanedeth.RPCClient
 	subscriptions map[string]*subscription
 	streams       map[string]*eventStream
 	closed        bool
@@ -95,7 +95,7 @@ func CobraInitSubscriptionManager(cmd *cobra.Command, conf *SubscriptionManagerC
 }
 
 // NewSubscriptionManager construtor
-func NewSubscriptionManager(conf *SubscriptionManagerConf, rpc turbokeeperdeth.RPCClient) SubscriptionManager {
+func NewSubscriptionManager(conf *SubscriptionManagerConf, rpc maidenlanedeth.RPCClient) SubscriptionManager {
 	sm := &subscriptionMGR{
 		conf:          conf,
 		rpc:           rpc,
@@ -133,7 +133,7 @@ func (s *subscriptionMGR) setInitialBlock(i *SubscriptionInfo, initialBlock stri
 	} else {
 		var bi big.Int
 		if _, ok := bi.SetString(initialBlock, 0); !ok {
-			return turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsSubscribeBadBlock)
+			return maidenlanederrors.Errorf(maidenlanederrors.EventStreamsSubscribeBadBlock)
 		}
 		i.FromBlock = bi.Text(10)
 	}
@@ -141,12 +141,12 @@ func (s *subscriptionMGR) setInitialBlock(i *SubscriptionInfo, initialBlock stri
 }
 
 // AddSubscription adds a new subscription
-func (s *subscriptionMGR) AddSubscription(ctx context.Context, addr *turbokeeperdbind.Address, event *turbokeeperdbind.ABIElementMarshaling, streamID, initialBlock, name string) (*SubscriptionInfo, error) {
+func (s *subscriptionMGR) AddSubscription(ctx context.Context, addr *maidenlanedbind.Address, event *maidenlanedbind.ABIElementMarshaling, streamID, initialBlock, name string) (*SubscriptionInfo, error) {
 	i := &SubscriptionInfo{
-		TimeSorted: turbokeeperdmessages.TimeSorted{
+		TimeSorted: maidenlanedmessages.TimeSorted{
 			CreatedISO8601: time.Now().UTC().Format(time.RFC3339),
 		},
-		ID:     subIDPrefix + turbokeeperdutils.UUIDv4(),
+		ID:     subIDPrefix + maidenlanedutils.UUIDv4(),
 		Event:  event,
 		Stream: streamID,
 	}
@@ -215,7 +215,7 @@ func (s *subscriptionMGR) deleteSubscription(ctx context.Context, sub *subscript
 func (s *subscriptionMGR) storeSubscription(info *SubscriptionInfo) (*SubscriptionInfo, error) {
 	infoBytes, _ := json.MarshalIndent(info, "", "  ")
 	if err := s.db.Put(info.ID, infoBytes); err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsSubscribeStoreFailed, err)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.EventStreamsSubscribeStoreFailed, err)
 	}
 	return info, nil
 }
@@ -240,7 +240,7 @@ func (s *subscriptionMGR) Streams(ctx context.Context) []*StreamInfo {
 
 // AddStream adds a new stream
 func (s *subscriptionMGR) AddStream(ctx context.Context, spec *StreamInfo) (*StreamInfo, error) {
-	spec.ID = streamIDPrefix + turbokeeperdutils.UUIDv4()
+	spec.ID = streamIDPrefix + maidenlanedutils.UUIDv4()
 	spec.CreatedISO8601 = time.Now().UTC().Format(time.RFC3339)
 	spec.Path = StreamPathPrefix + "/" + spec.ID
 	stream, err := newEventStream(s, spec)
@@ -267,7 +267,7 @@ func (s *subscriptionMGR) UpdateStream(ctx context.Context, id string, spec *Str
 func (s *subscriptionMGR) storeStream(spec *StreamInfo) (*StreamInfo, error) {
 	infoBytes, _ := json.MarshalIndent(spec, "", "  ")
 	if err := s.db.Put(spec.ID, infoBytes); err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsCreateStreamStoreFailed, err)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.EventStreamsCreateStreamStoreFailed, err)
 	}
 	return spec, nil
 }
@@ -333,7 +333,7 @@ func (s *subscriptionMGR) ResumeStream(ctx context.Context, id string) error {
 func (s *subscriptionMGR) subscriptionByID(id string) (*subscription, error) {
 	sub, exists := s.subscriptions[id]
 	if !exists {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsSubscriptionNotFound, id)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.EventStreamsSubscriptionNotFound, id)
 	}
 	return sub, nil
 }
@@ -342,7 +342,7 @@ func (s *subscriptionMGR) subscriptionByID(id string) (*subscription, error) {
 func (s *subscriptionMGR) streamByID(id string) (*eventStream, error) {
 	stream, exists := s.streams[id]
 	if !exists {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsStreamNotFound, id)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.EventStreamsStreamNotFound, id)
 	}
 	return stream, nil
 }
@@ -377,8 +377,8 @@ func (s *subscriptionMGR) deleteCheckpoint(streamID string) {
 }
 
 func (s *subscriptionMGR) Init() (err error) {
-	if s.db, err = turbokeeperdkvstore.NewLDBKeyValueStore(s.conf.EventLevelDBPath); err != nil {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.EventStreamsDBLoad, s.conf.EventLevelDBPath, err)
+	if s.db, err = maidenlanedkvstore.NewLDBKeyValueStore(s.conf.EventLevelDBPath); err != nil {
+		return maidenlanederrors.Errorf(maidenlanederrors.EventStreamsDBLoad, s.conf.EventLevelDBPath, err)
 	}
 	s.recoverStreams()
 	s.recoverSubscriptions()

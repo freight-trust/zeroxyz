@@ -12,38 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdauth
+package maidenlanedauth
 
 import (
 	"context"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/pkg/turbokeeperdplugins"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/pkg/maidenlanedplugins"
 )
 
-type turbokeeperdContextKey int
+type maidenlanedContextKey int
 
 const (
-	turbokeeperdContextKeySystemAuth turbokeeperdContextKey = iota
-	turbokeeperdContextKeyAuthContext
-	turbokeeperdContextKeyAccessToken
+	maidenlanedContextKeySystemAuth maidenlanedContextKey = iota
+	maidenlanedContextKeyAuthContext
+	maidenlanedContextKeyAccessToken
 )
 
-var securityModule turbokeeperdplugins.SecurityModule
+var securityModule maidenlanedplugins.SecurityModule
 
 // RegisterSecurityModule is the plug point to register a security module
-func RegisterSecurityModule(sm turbokeeperdplugins.SecurityModule) {
+func RegisterSecurityModule(sm maidenlanedplugins.SecurityModule) {
 	securityModule = sm
 }
 
 // NewSystemAuthContext creates a system background context
 func NewSystemAuthContext() context.Context {
-	return context.WithValue(context.Background(), turbokeeperdContextKeySystemAuth, true)
+	return context.WithValue(context.Background(), maidenlanedContextKeySystemAuth, true)
 }
 
 // IsSystemContext checks if a context was created as a system context
 func IsSystemContext(ctx context.Context) bool {
-	b, ok := ctx.Value(turbokeeperdContextKeySystemAuth).(bool)
+	b, ok := ctx.Value(maidenlanedContextKeySystemAuth).(bool)
 	return ok && b
 }
 
@@ -54,8 +54,8 @@ func WithAuthContext(ctx context.Context, token string) (context.Context, error)
 		if err != nil {
 			return nil, err
 		}
-		ctx = context.WithValue(ctx, turbokeeperdContextKeyAccessToken, token)
-		ctx = context.WithValue(ctx, turbokeeperdContextKeyAuthContext, ctxValue)
+		ctx = context.WithValue(ctx, maidenlanedContextKeyAccessToken, token)
+		ctx = context.WithValue(ctx, maidenlanedContextKeyAuthContext, ctxValue)
 		return ctx, nil
 	}
 	return ctx, nil
@@ -63,12 +63,12 @@ func WithAuthContext(ctx context.Context, token string) (context.Context, error)
 
 // GetAuthContext extracts a previously stored auth context from the context
 func GetAuthContext(ctx context.Context) interface{} {
-	return ctx.Value(turbokeeperdContextKeyAuthContext)
+	return ctx.Value(maidenlanedContextKeyAuthContext)
 }
 
 // GetAccessToken extracts a previously stored access token
 func GetAccessToken(ctx context.Context) string {
-	v, ok := ctx.Value(turbokeeperdContextKeyAccessToken).(string)
+	v, ok := ctx.Value(maidenlanedContextKeyAccessToken).(string)
 	if ok {
 		return v
 	}
@@ -80,7 +80,7 @@ func AuthRPC(ctx context.Context, method string, args ...interface{}) error {
 	if securityModule != nil && !IsSystemContext(ctx) {
 		authCtx := GetAuthContext(ctx)
 		if authCtx == nil {
-			return turbokeeperderrors.Errorf(turbokeeperderrors.SecurityModuleNoAuthContext)
+			return maidenlanederrors.Errorf(maidenlanederrors.SecurityModuleNoAuthContext)
 		}
 		return securityModule.AuthRPC(authCtx, method, args...)
 	}
@@ -92,7 +92,7 @@ func AuthRPCSubscribe(ctx context.Context, namespace string, channel interface{}
 	if securityModule != nil && !IsSystemContext(ctx) {
 		authCtx := GetAuthContext(ctx)
 		if authCtx == nil {
-			return turbokeeperderrors.Errorf(turbokeeperderrors.SecurityModuleNoAuthContext)
+			return maidenlanederrors.Errorf(maidenlanederrors.SecurityModuleNoAuthContext)
 		}
 		return securityModule.AuthRPCSubscribe(authCtx, namespace, channel, args...)
 	}
@@ -104,7 +104,7 @@ func AuthEventStreams(ctx context.Context) error {
 	if securityModule != nil && !IsSystemContext(ctx) {
 		authCtx := GetAuthContext(ctx)
 		if authCtx == nil {
-			return turbokeeperderrors.Errorf(turbokeeperderrors.SecurityModuleNoAuthContext)
+			return maidenlanederrors.Errorf(maidenlanederrors.SecurityModuleNoAuthContext)
 		}
 		return securityModule.AuthEventStreams(authCtx)
 	}
@@ -116,7 +116,7 @@ func AuthListAsyncReplies(ctx context.Context) error {
 	if securityModule != nil && !IsSystemContext(ctx) {
 		authCtx := GetAuthContext(ctx)
 		if authCtx == nil {
-			return turbokeeperderrors.Errorf(turbokeeperderrors.SecurityModuleNoAuthContext)
+			return maidenlanederrors.Errorf(maidenlanederrors.SecurityModuleNoAuthContext)
 		}
 		return securityModule.AuthListAsyncReplies(authCtx)
 	}
@@ -128,7 +128,7 @@ func AuthReadAsyncReplyByUUID(ctx context.Context) error {
 	if securityModule != nil && !IsSystemContext(ctx) {
 		authCtx := GetAuthContext(ctx)
 		if authCtx == nil {
-			return turbokeeperderrors.Errorf(turbokeeperderrors.SecurityModuleNoAuthContext)
+			return maidenlanederrors.Errorf(maidenlanederrors.SecurityModuleNoAuthContext)
 		}
 		return securityModule.AuthReadAsyncReplyByUUID(authCtx)
 	}

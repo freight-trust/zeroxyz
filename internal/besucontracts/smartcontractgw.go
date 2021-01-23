@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdcontracts
+package maidenlanedcontracts
 
 import (
 	"bufio"
@@ -36,18 +36,18 @@ import (
 
 	"github.com/go-openapi/spec"
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdopenapi"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdtx"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedopenapi"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedtx"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
 	"github.com/spf13/cobra"
 
 	"github.com/ethereum/go-ethereum/common/compiler"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdevents"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedevents"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
 	"github.com/mholt/archiver"
 
 	log "github.com/sirupsen/logrus"
@@ -61,8 +61,8 @@ const (
 
 // SmartContractGateway provides gateway functions for OpenAPI 2.0 processing of Solidity contracts
 type SmartContractGateway interface {
-	PreDeploy(msg *turbokeeperdmessages.DeployContract) error
-	PostDeploy(msg *turbokeeperdmessages.TransactionReceipt) error
+	PreDeploy(msg *maidenlanedmessages.DeployContract) error
+	PostDeploy(msg *maidenlanedmessages.TransactionReceipt) error
 	AddRoutes(router *httprouter.Router)
 	Shutdown()
 }
@@ -70,14 +70,14 @@ type SmartContractGateway interface {
 type smartContractGatewayInt interface {
 	SmartContractGateway
 	resolveContractAddr(registeredName string) (string, error)
-	loadDeployMsgForInstance(addrHexNo0x string) (*turbokeeperdmessages.DeployContract, *contractInfo, error)
-	loadDeployMsgByID(abi string) (*turbokeeperdmessages.DeployContract, *abiInfo, error)
+	loadDeployMsgForInstance(addrHexNo0x string) (*maidenlanedmessages.DeployContract, *contractInfo, error)
+	loadDeployMsgByID(abi string) (*maidenlanedmessages.DeployContract, *abiInfo, error)
 	checkNameAvailable(name string, isRemote bool) error
 }
 
 // SmartContractGatewayConf configuration
 type SmartContractGatewayConf struct {
-	turbokeeperdevents.SubscriptionManagerConf
+	maidenlanedevents.SubscriptionManagerConf
 	StoragePath    string             `json:"storagePath"`
 	BaseURL        string             `json:"baseURL"`
 	RemoteRegistry RemoteRegistryConf `json:"registry,omitempty"` // JSON only config - no commandline
@@ -87,15 +87,15 @@ type SmartContractGatewayConf struct {
 func CobraInitContractGateway(cmd *cobra.Command, conf *SmartContractGatewayConf) {
 	cmd.Flags().StringVarP(&conf.StoragePath, "openapi-path", "I", "", "Path containing ABI + generated OpenAPI/Swagger 2.0 contact definitions")
 	cmd.Flags().StringVarP(&conf.BaseURL, "openapi-baseurl", "U", "", "Base URL for generated OpenAPI/Swagger 2.0 contact definitions")
-	turbokeeperdevents.CobraInitSubscriptionManager(cmd, &conf.SubscriptionManagerConf)
+	maidenlanedevents.CobraInitSubscriptionManager(cmd, &conf.SubscriptionManagerConf)
 }
 
 func (g *smartContractGW) withEventsAuth(handler httprouter.Handle) httprouter.Handle {
 	return func(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		err := turbokeeperdauth.AuthEventStreams(req.Context())
+		err := maidenlanedauth.AuthEventStreams(req.Context())
 		if err != nil {
 			log.Errorf("Unauthorized: %s", err)
-			g.gatewayErrReply(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.Unauthorized), 401)
+			g.gatewayErrReply(res, req, maidenlanederrors.Errorf(maidenlanederrors.Unauthorized), 401)
 			return
 		}
 		handler(res, req, params)
@@ -114,21 +114,21 @@ func (g *smartContractGW) AddRoutes(router *httprouter.Router) {
 	router.GET("/i/:instance_lookup", g.getRemoteRegistrySwaggerOrABI)
 	router.GET("/gateways/:gateway_lookup", g.getRemoteRegistrySwaggerOrABI)
 	router.GET("/g/:gateway_lookup", g.getRemoteRegistrySwaggerOrABI)
-	router.POST(turbokeeperdevents.StreamPathPrefix, g.withEventsAuth(g.createStream))
-	router.PATCH(turbokeeperdevents.StreamPathPrefix+"/:id", g.withEventsAuth(g.updateStream))
-	router.GET(turbokeeperdevents.StreamPathPrefix, g.withEventsAuth(g.listStreamsOrSubs))
-	router.GET(turbokeeperdevents.SubPathPrefix, g.withEventsAuth(g.listStreamsOrSubs))
-	router.GET(turbokeeperdevents.StreamPathPrefix+"/:id", g.withEventsAuth(g.getStreamOrSub))
-	router.GET(turbokeeperdevents.SubPathPrefix+"/:id", g.withEventsAuth(g.getStreamOrSub))
-	router.DELETE(turbokeeperdevents.StreamPathPrefix+"/:id", g.withEventsAuth(g.deleteStreamOrSub))
-	router.DELETE(turbokeeperdevents.SubPathPrefix+"/:id", g.withEventsAuth(g.deleteStreamOrSub))
-	router.POST(turbokeeperdevents.SubPathPrefix+"/:id/reset", g.withEventsAuth(g.resetSub))
-	router.POST(turbokeeperdevents.StreamPathPrefix+"/:id/suspend", g.withEventsAuth(g.suspendOrResumeStream))
-	router.POST(turbokeeperdevents.StreamPathPrefix+"/:id/resume", g.withEventsAuth(g.suspendOrResumeStream))
+	router.POST(maidenlanedevents.StreamPathPrefix, g.withEventsAuth(g.createStream))
+	router.PATCH(maidenlanedevents.StreamPathPrefix+"/:id", g.withEventsAuth(g.updateStream))
+	router.GET(maidenlanedevents.StreamPathPrefix, g.withEventsAuth(g.listStreamsOrSubs))
+	router.GET(maidenlanedevents.SubPathPrefix, g.withEventsAuth(g.listStreamsOrSubs))
+	router.GET(maidenlanedevents.StreamPathPrefix+"/:id", g.withEventsAuth(g.getStreamOrSub))
+	router.GET(maidenlanedevents.SubPathPrefix+"/:id", g.withEventsAuth(g.getStreamOrSub))
+	router.DELETE(maidenlanedevents.StreamPathPrefix+"/:id", g.withEventsAuth(g.deleteStreamOrSub))
+	router.DELETE(maidenlanedevents.SubPathPrefix+"/:id", g.withEventsAuth(g.deleteStreamOrSub))
+	router.POST(maidenlanedevents.SubPathPrefix+"/:id/reset", g.withEventsAuth(g.resetSub))
+	router.POST(maidenlanedevents.StreamPathPrefix+"/:id/suspend", g.withEventsAuth(g.suspendOrResumeStream))
+	router.POST(maidenlanedevents.StreamPathPrefix+"/:id/resume", g.withEventsAuth(g.suspendOrResumeStream))
 }
 
 // NewSmartContractGateway construtor
-func NewSmartContractGateway(conf *SmartContractGatewayConf, txnConf *turbokeeperdtx.TxnProcessorConf, rpc turbokeeperdeth.RPCClient, processor turbokeeperdtx.TxnProcessor, asyncDispatcher REST2EthAsyncDispatcher) (SmartContractGateway, error) {
+func NewSmartContractGateway(conf *SmartContractGatewayConf, txnConf *maidenlanedtx.TxnProcessorConf, rpc maidenlanedeth.RPCClient, processor maidenlanedtx.TxnProcessor, asyncDispatcher REST2EthAsyncDispatcher) (SmartContractGateway, error) {
 	var baseURL *url.URL
 	var err error
 	if conf.BaseURL != "" {
@@ -143,10 +143,10 @@ func NewSmartContractGateway(conf *SmartContractGatewayConf, txnConf *turbokeepe
 	gw := &smartContractGW{
 		conf:                  conf,
 		rr:                    NewRemoteRegistry(&conf.RemoteRegistry),
-		contractIndex:         make(map[string]turbokeeperdmessages.TimeSortable),
+		contractIndex:         make(map[string]maidenlanedmessages.TimeSortable),
 		contractRegistrations: make(map[string]*contractInfo),
-		abiIndex:              make(map[string]turbokeeperdmessages.TimeSortable),
-		baseSwaggerConf: &turbokeeperdopenapi.ABI2SwaggerConf{
+		abiIndex:              make(map[string]maidenlanedmessages.TimeSortable),
+		baseSwaggerConf: &maidenlanedopenapi.ABI2SwaggerConf{
 			ExternalHost:     baseURL.Host,
 			ExternalRootPath: baseURL.Path,
 			ExternalSchemes:  []string{baseURL.Scheme},
@@ -159,10 +159,10 @@ func NewSmartContractGateway(conf *SmartContractGatewayConf, txnConf *turbokeepe
 	}
 	syncDispatcher := newSyncDispatcher(processor)
 	if conf.EventLevelDBPath != "" {
-		gw.sm = turbokeeperdevents.NewSubscriptionManager(&conf.SubscriptionManagerConf, rpc)
+		gw.sm = maidenlanedevents.NewSubscriptionManager(&conf.SubscriptionManagerConf, rpc)
 		err = gw.sm.Init()
 		if err != nil {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayEventManagerInitFailed, err)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayEventManagerInitFailed, err)
 		}
 	}
 	gw.r2e = newREST2eth(gw, rpc, gw.sm, gw.rr, processor, asyncDispatcher, syncDispatcher)
@@ -172,20 +172,20 @@ func NewSmartContractGateway(conf *SmartContractGatewayConf, txnConf *turbokeepe
 
 type smartContractGW struct {
 	conf                  *SmartContractGatewayConf
-	sm                    turbokeeperdevents.SubscriptionManager
+	sm                    maidenlanedevents.SubscriptionManager
 	rr                    RemoteRegistry
 	r2e                   *rest2eth
-	contractIndex         map[string]turbokeeperdmessages.TimeSortable
+	contractIndex         map[string]maidenlanedmessages.TimeSortable
 	contractRegistrations map[string]*contractInfo
 	idxLock               sync.Mutex
-	abiIndex              map[string]turbokeeperdmessages.TimeSortable
-	baseSwaggerConf       *turbokeeperdopenapi.ABI2SwaggerConf
+	abiIndex              map[string]maidenlanedmessages.TimeSortable
+	baseSwaggerConf       *maidenlanedopenapi.ABI2SwaggerConf
 }
 
 // contractInfo is the minimal data structure we keep in memory, indexed by address
 // ONLY used for local registry. Remote registry handles its own storage/caching
 type contractInfo struct {
-	turbokeeperdmessages.TimeSorted
+	maidenlanedmessages.TimeSorted
 	Address      string `json:"address"`
 	Path         string `json:"path"`
 	ABI          string `json:"abi"`
@@ -195,7 +195,7 @@ type contractInfo struct {
 
 // abiInfo is the minimal data structure we keep in memory, indexed by our own UUID
 type abiInfo struct {
-	turbokeeperdmessages.TimeSorted
+	maidenlanedmessages.TimeSorted
 	ID              string `json:"id"`
 	Name            string `json:"name"`
 	Description     string `json:"description"`
@@ -209,7 +209,7 @@ type abiInfo struct {
 type remoteContractInfo struct {
 	ID      string                `json:"id"`
 	Address string                `json:"address,omitempty"`
-	ABI     turbokeeperdbind.ABIMarshaling `json:"abi"`
+	ABI     maidenlanedbind.ABIMarshaling `json:"abi"`
 }
 
 func (i *contractInfo) GetID() string {
@@ -227,7 +227,7 @@ func (g *smartContractGW) storeNewContractInfo(addrHexNo0x, abiID, pathName, reg
 		Path:         "/contracts/" + pathName,
 		SwaggerURL:   g.conf.BaseURL + "/contracts/" + pathName + "?swagger",
 		RegisteredAs: registerAs,
-		TimeSorted: turbokeeperdmessages.TimeSorted{
+		TimeSorted: maidenlanedmessages.TimeSorted{
 			CreatedISO8601: time.Now().UTC().Format(time.RFC3339),
 		},
 	}
@@ -237,7 +237,7 @@ func (g *smartContractGW) storeNewContractInfo(addrHexNo0x, abiID, pathName, reg
 	return contractInfo, nil
 }
 
-func isRemote(msg turbokeeperdmessages.CommonHeaders) bool {
+func isRemote(msg maidenlanedmessages.CommonHeaders) bool {
 	ctxMap := msg.Context
 	if isRemoteGeneric, ok := ctxMap[remoteRegistryContextKey]; ok {
 		if isRemote, ok := isRemoteGeneric.(bool); ok {
@@ -248,14 +248,14 @@ func isRemote(msg turbokeeperdmessages.CommonHeaders) bool {
 }
 
 // PostDeploy callback processes the transaction receipt and generates the Swagger
-func (g *smartContractGW) PostDeploy(msg *turbokeeperdmessages.TransactionReceipt) error {
+func (g *smartContractGW) PostDeploy(msg *maidenlanedmessages.TransactionReceipt) error {
 
 	requestID := msg.Headers.ReqID
 
 	// We use the ethereum address of the contract, without the 0x prefix, and
 	// all in lower case, as the name of the file and the path root of the Swagger operations
 	if msg.ContractAddress == nil {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayPostDeployMissingAddress, requestID)
+		return maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayPostDeployMissingAddress, requestID)
 	}
 	addrHexNo0x := strings.ToLower(msg.ContractAddress.Hex()[2:])
 
@@ -270,7 +270,7 @@ func (g *smartContractGW) PostDeploy(msg *turbokeeperdmessages.TransactionReceip
 		registeredName = addrHexNo0x
 	}
 
-	if msg.Headers.MsgType == turbokeeperdmessages.MsgTypeTransactionSuccess {
+	if msg.Headers.MsgType == maidenlanedmessages.MsgTypeTransactionSuccess {
 		msg.ContractSwagger = g.conf.BaseURL + basePath + registeredName + "?openapi"
 		msg.ContractUI = g.conf.BaseURL + basePath + registeredName + "?ui"
 
@@ -287,7 +287,7 @@ func (g *smartContractGW) PostDeploy(msg *turbokeeperdmessages.TransactionReceip
 	return nil
 }
 
-func (g *smartContractGW) swaggerForRemoteRegistry(swaggerGen *turbokeeperdopenapi.ABI2Swagger, apiName, addr string, factoryOnly bool, abi *turbokeeperdbind.RuntimeABI, devdoc, path string) *spec.Swagger {
+func (g *smartContractGW) swaggerForRemoteRegistry(swaggerGen *maidenlanedopenapi.ABI2Swagger, apiName, addr string, factoryOnly bool, abi *maidenlanedbind.RuntimeABI, devdoc, path string) *spec.Swagger {
 	var swagger *spec.Swagger
 	if addr == "" {
 		swagger = swaggerGen.Gen4Factory(path, apiName, factoryOnly, true, &abi.ABI, devdoc)
@@ -297,7 +297,7 @@ func (g *smartContractGW) swaggerForRemoteRegistry(swaggerGen *turbokeeperdopena
 	return swagger
 }
 
-func (g *smartContractGW) swaggerForABI(swaggerGen *turbokeeperdopenapi.ABI2Swagger, abiID, apiName string, factoryOnly bool, abi *turbokeeperdbind.RuntimeABI, devdoc string, addrHexNo0x, registerAs string) *spec.Swagger {
+func (g *smartContractGW) swaggerForABI(swaggerGen *maidenlanedopenapi.ABI2Swagger, abiID, apiName string, factoryOnly bool, abi *maidenlanedbind.RuntimeABI, devdoc string, addrHexNo0x, registerAs string) *spec.Swagger {
 	// Ensure we have a contract name in all cases, as the Swagger
 	// won't be valid without a title
 	if apiName == "" {
@@ -311,7 +311,7 @@ func (g *smartContractGW) swaggerForABI(swaggerGen *turbokeeperdopenapi.ABI2Swag
 		}
 		swagger = swaggerGen.Gen4Instance("/contracts/"+pathSuffix, apiName, &abi.ABI, devdoc)
 		if registerAs != "" {
-			swagger.Info.AddExtension("x-turbokeeper-registered-name", pathSuffix)
+			swagger.Info.AddExtension("x-maidenlane-registered-name", pathSuffix)
 		}
 	} else {
 		swagger = swaggerGen.Gen4Factory("/abis/"+abiID, apiName, factoryOnly, false, &abi.ABI, devdoc)
@@ -319,7 +319,7 @@ func (g *smartContractGW) swaggerForABI(swaggerGen *turbokeeperdopenapi.ABI2Swag
 
 	// Add in an extension to the Swagger that points back at the filename of the deployment info
 	if abiID != "" {
-		swagger.Info.AddExtension("x-turbokeeper-deployment-id", abiID)
+		swagger.Info.AddExtension("x-maidenlane-deployment-id", abiID)
 	}
 
 	return swagger
@@ -333,7 +333,7 @@ func (g *smartContractGW) storeContractInfo(info *contractInfo) error {
 	instanceBytes, _ := json.MarshalIndent(info, "", "  ")
 	log.Infof("%s: Storing contract instance JSON to '%s'", info.ABI, infoFile)
 	if err := ioutil.WriteFile(infoFile, instanceBytes, 0664); err != nil {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayLocalStoreContractSave, err)
+		return maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayLocalStoreContractSave, err)
 	}
 	return nil
 }
@@ -342,38 +342,38 @@ func (g *smartContractGW) resolveContractAddr(registeredName string) (string, er
 	nameUnescaped, _ := url.QueryUnescape(registeredName)
 	info, exists := g.contractRegistrations[nameUnescaped]
 	if !exists {
-		return "", turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayLocalStoreContractLoad, registeredName)
+		return "", maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayLocalStoreContractLoad, registeredName)
 	}
 	log.Infof("%s -> 0x%s", registeredName, info.Address)
 	return info.Address, nil
 }
 
-func (g *smartContractGW) loadDeployMsgForInstance(addrHex string) (*turbokeeperdmessages.DeployContract, *contractInfo, error) {
+func (g *smartContractGW) loadDeployMsgForInstance(addrHex string) (*maidenlanedmessages.DeployContract, *contractInfo, error) {
 	addrHexNo0x := strings.TrimPrefix(strings.ToLower(addrHex), "0x")
 	info, exists := g.contractIndex[addrHexNo0x]
 	if !exists {
-		return nil, nil, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayLocalStoreContractNotFound, addrHexNo0x)
+		return nil, nil, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayLocalStoreContractNotFound, addrHexNo0x)
 	}
 	deployMsg, _, err := g.loadDeployMsgByID(info.(*contractInfo).ABI)
 	return deployMsg, info.(*contractInfo), err
 }
 
-func (g *smartContractGW) loadDeployMsgByID(id string) (*turbokeeperdmessages.DeployContract, *abiInfo, error) {
+func (g *smartContractGW) loadDeployMsgByID(id string) (*maidenlanedmessages.DeployContract, *abiInfo, error) {
 	var info *abiInfo
-	var msg *turbokeeperdmessages.DeployContract
+	var msg *maidenlanedmessages.DeployContract
 	ts, exists := g.abiIndex[id]
 	if !exists {
 		log.Infof("ABI with ID %s not found locally", id)
-		return nil, nil, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayLocalStoreABINotFound, id)
+		return nil, nil, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayLocalStoreABINotFound, id)
 	}
 	deployFile := path.Join(g.conf.StoragePath, "abi_"+id+".deploy.json")
 	deployBytes, err := ioutil.ReadFile(deployFile)
 	if err != nil {
-		return nil, nil, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayLocalStoreABILoad, id, err)
+		return nil, nil, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayLocalStoreABILoad, id, err)
 	}
-	msg = &turbokeeperdmessages.DeployContract{}
+	msg = &maidenlanedmessages.DeployContract{}
 	if err = json.Unmarshal(deployBytes, msg); err != nil {
-		return nil, nil, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayLocalStoreABIParse, id, err)
+		return nil, nil, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayLocalStoreABIParse, id, err)
 	}
 	info = ts.(*abiInfo)
 	return msg, info, nil
@@ -384,11 +384,11 @@ func (g *smartContractGW) loadDeployMsgByID(id string) (*turbokeeperdmessages.De
 // - puts the code into the message to avoid a recompile later
 // - stores the ABI under the MsgID (can later be bound to an address)
 // *** caller is responsible for ensuring unique Header.ID ***
-func (g *smartContractGW) PreDeploy(msg *turbokeeperdmessages.DeployContract) (err error) {
+func (g *smartContractGW) PreDeploy(msg *maidenlanedmessages.DeployContract) (err error) {
 	solidity := msg.Solidity
-	var compiled *turbokeeperdeth.CompiledSolidity
+	var compiled *maidenlanedeth.CompiledSolidity
 	if solidity != "" {
-		if compiled, err = turbokeeperdeth.CompileContract(solidity, msg.ContractName, msg.CompilerVersion, msg.EVMVersion); err != nil {
+		if compiled, err = maidenlanedeth.CompileContract(solidity, msg.ContractName, msg.CompilerVersion, msg.EVMVersion); err != nil {
 			return err
 		}
 	}
@@ -398,7 +398,7 @@ func (g *smartContractGW) PreDeploy(msg *turbokeeperdmessages.DeployContract) (e
 	return err
 }
 
-func (g *smartContractGW) storeDeployableABI(msg *turbokeeperdmessages.DeployContract, compiled *turbokeeperdeth.CompiledSolidity) (*abiInfo, error) {
+func (g *smartContractGW) storeDeployableABI(msg *maidenlanedmessages.DeployContract, compiled *maidenlanedeth.CompiledSolidity) (*abiInfo, error) {
 
 	if compiled != nil {
 		msg.Compiled = compiled.Compiled
@@ -407,19 +407,19 @@ func (g *smartContractGW) storeDeployableABI(msg *turbokeeperdmessages.DeployCon
 		msg.ContractName = compiled.ContractName
 		msg.CompilerVersion = compiled.ContractInfo.CompilerVersion
 	} else if msg.ABI == nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayLocalStoreMissingABI)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayLocalStoreMissingABI)
 	}
 
-	runtimeABI, err := turbokeeperdbind.ABIMarshalingToABIRuntime(msg.ABI)
+	runtimeABI, err := maidenlanedbind.ABIMarshalingToABIRuntime(msg.ABI)
 	if err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayInvalidABI, err)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayInvalidABI, err)
 	}
 
 	requestID := msg.Headers.ID
 	// We store the swagger in a generic format that can be used to deploy
 	// additional instances, or generically call other instances
 	// Generate and store the swagger
-	swagger := g.swaggerForABI(turbokeeperdopenapi.NewABI2Swagger(g.baseSwaggerConf), requestID, msg.ContractName, false, runtimeABI, msg.DevDoc, "", "")
+	swagger := g.swaggerForABI(maidenlanedopenapi.NewABI2Swagger(g.baseSwaggerConf), requestID, msg.ContractName, false, runtimeABI, msg.DevDoc, "", "")
 	msg.Description = swagger.Info.Description // Swagger generation parses the devdoc
 	info := g.addToABIIndex(requestID, msg, time.Now().UTC())
 
@@ -443,14 +443,14 @@ func (g *smartContractGW) gatewayErrReply(res http.ResponseWriter, req *http.Req
 	return
 }
 
-func (g *smartContractGW) writeAbiInfo(requestID string, msg *turbokeeperdmessages.DeployContract) error {
+func (g *smartContractGW) writeAbiInfo(requestID string, msg *maidenlanedmessages.DeployContract) error {
 	// We store all the details from our compile, or the user-supplied
 	// details, in a file under the message ID.
 	infoFile := path.Join(g.conf.StoragePath, "abi_"+requestID+".deploy.json")
 	infoBytes, _ := json.MarshalIndent(msg, "", "  ")
 	log.Infof("%s: Stashing deployment details to '%s'", requestID, infoFile)
 	if err := ioutil.WriteFile(infoFile, infoBytes, 0664); err != nil {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayLocalStoreContractSavePostDeploy, requestID, err)
+		return maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayLocalStoreContractSavePostDeploy, requestID, err)
 	}
 	return nil
 }
@@ -499,10 +499,10 @@ func (g *smartContractGW) migrateLegacyContract(address, fileName string, create
 		return
 	}
 	var registeredAs string
-	if ext, exists := swagger.Info.Extensions["x-turbokeeper-registered-name"]; exists {
+	if ext, exists := swagger.Info.Extensions["x-maidenlane-registered-name"]; exists {
 		registeredAs = ext.(string)
 	}
-	if ext, exists := swagger.Info.Extensions["x-turbokeeper-deployment-id"]; exists {
+	if ext, exists := swagger.Info.Extensions["x-maidenlane-deployment-id"]; exists {
 		_, err := g.storeNewContractInfo(address, ext.(string), address, registeredAs)
 		if err != nil {
 			log.Errorf("Failed to write migrated instance file: %s", err)
@@ -514,7 +514,7 @@ func (g *smartContractGW) migrateLegacyContract(address, fileName string, create
 		}
 
 	} else {
-		log.Warnf("Swagger cannot be migrated due to missing 'x-turbokeeper-deployment-id' extension: %s", fileName)
+		log.Warnf("Swagger cannot be migrated due to missing 'x-maidenlane-deployment-id' extension: %s", fileName)
 	}
 
 }
@@ -542,7 +542,7 @@ func (g *smartContractGW) addFileToABIIndex(id, fileName string, createdTime tim
 		return
 	}
 	defer deployFile.Close()
-	var deployMsg turbokeeperdmessages.DeployContract
+	var deployMsg maidenlanedmessages.DeployContract
 	err = json.NewDecoder(bufio.NewReader(deployFile)).Decode(&deployMsg)
 	if err != nil {
 		log.Errorf("Failed to parse ABI deployment file %s: %s", fileName, err)
@@ -557,12 +557,12 @@ func (g *smartContractGW) checkNameAvailable(registerAs string, isRemote bool) e
 		if err != nil {
 			return err
 		} else if msg != nil {
-			return turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayFriendlyNameClash, msg.Address, registerAs)
+			return maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayFriendlyNameClash, msg.Address, registerAs)
 		}
 		return nil
 	}
 	if existing, exists := g.contractRegistrations[registerAs]; exists {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayFriendlyNameClash, existing.Address, registerAs)
+		return maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayFriendlyNameClash, existing.Address, registerAs)
 	}
 	return nil
 }
@@ -582,7 +582,7 @@ func (g *smartContractGW) addToContractIndex(info *contractInfo) error {
 	return nil
 }
 
-func (g *smartContractGW) addToABIIndex(id string, deployMsg *turbokeeperdmessages.DeployContract, createdTime time.Time) *abiInfo {
+func (g *smartContractGW) addToABIIndex(id string, deployMsg *maidenlanedmessages.DeployContract, createdTime time.Time) *abiInfo {
 	g.idxLock.Lock()
 	info := &abiInfo{
 		ID:              id,
@@ -592,7 +592,7 @@ func (g *smartContractGW) addToABIIndex(id string, deployMsg *turbokeeperdmessag
 		CompilerVersion: deployMsg.CompilerVersion,
 		Path:            "/abis/" + id,
 		SwaggerURL:      g.conf.BaseURL + "/abis/" + id + "?swagger",
-		TimeSorted: turbokeeperdmessages.TimeSorted{
+		TimeSorted: maidenlanedmessages.TimeSorted{
 			CreatedISO8601: createdTime.UTC().Format(time.RFC3339),
 		},
 	}
@@ -605,7 +605,7 @@ func (g *smartContractGW) addToABIIndex(id string, deployMsg *turbokeeperdmessag
 func (g *smartContractGW) listContractsOrABIs(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	log.Infof("--> %s %s", req.Method, req.URL)
 
-	var index map[string]turbokeeperdmessages.TimeSortable
+	var index map[string]maidenlanedmessages.TimeSortable
 	if strings.HasSuffix(req.URL.Path, "contracts") {
 		index = g.contractIndex
 	} else {
@@ -614,7 +614,7 @@ func (g *smartContractGW) listContractsOrABIs(res http.ResponseWriter, req *http
 
 	// Get an array copy of the current list
 	g.idxLock.Lock()
-	retval := make([]turbokeeperdmessages.TimeSortable, 0, len(index))
+	retval := make([]maidenlanedmessages.TimeSortable, 0, len(index))
 	for _, info := range index {
 		retval = append(retval, info)
 	}
@@ -643,9 +643,9 @@ func (g *smartContractGW) createStream(res http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	var spec turbokeeperdevents.StreamInfo
+	var spec maidenlanedevents.StreamInfo
 	if err := json.NewDecoder(req.Body).Decode(&spec); err != nil {
-		g.gatewayErrReply(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayEventStreamInvalid, err), 400)
+		g.gatewayErrReply(res, req, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayEventStreamInvalid, err), 400)
 		return
 	}
 
@@ -679,9 +679,9 @@ func (g *smartContractGW) updateStream(res http.ResponseWriter, req *http.Reques
 		g.gatewayErrReply(res, req, err, 404)
 		return
 	}
-	var spec turbokeeperdevents.StreamInfo
+	var spec maidenlanedevents.StreamInfo
 	if err := json.NewDecoder(req.Body).Decode(&spec); err != nil {
-		g.gatewayErrReply(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayEventStreamInvalid, err), 400)
+		g.gatewayErrReply(res, req, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayEventStreamInvalid, err), 400)
 		return
 	}
 	newSpec, err := g.sm.UpdateStream(req.Context(), streamID, &spec)
@@ -708,16 +708,16 @@ func (g *smartContractGW) listStreamsOrSubs(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	var results []turbokeeperdmessages.TimeSortable
-	if strings.HasPrefix(req.URL.Path, turbokeeperdevents.SubPathPrefix) {
+	var results []maidenlanedmessages.TimeSortable
+	if strings.HasPrefix(req.URL.Path, maidenlanedevents.SubPathPrefix) {
 		subs := g.sm.Subscriptions(req.Context())
-		results = make([]turbokeeperdmessages.TimeSortable, len(subs))
+		results = make([]maidenlanedmessages.TimeSortable, len(subs))
 		for i := range subs {
 			results[i] = subs[i]
 		}
 	} else {
 		streams := g.sm.Streams(req.Context())
-		results = make([]turbokeeperdmessages.TimeSortable, len(streams))
+		results = make([]maidenlanedmessages.TimeSortable, len(streams))
 		for i := range streams {
 			results[i] = streams[i]
 		}
@@ -748,7 +748,7 @@ func (g *smartContractGW) getStreamOrSub(res http.ResponseWriter, req *http.Requ
 
 	var retval interface{}
 	var err error
-	if strings.HasPrefix(req.URL.Path, turbokeeperdevents.SubPathPrefix) {
+	if strings.HasPrefix(req.URL.Path, maidenlanedevents.SubPathPrefix) {
 		retval, err = g.sm.SubscriptionByID(req.Context(), params.ByName("id"))
 	} else {
 		retval, err = g.sm.StreamByID(req.Context(), params.ByName("id"))
@@ -777,7 +777,7 @@ func (g *smartContractGW) deleteStreamOrSub(res http.ResponseWriter, req *http.R
 	}
 
 	var err error
-	if strings.HasPrefix(req.URL.Path, turbokeeperdevents.SubPathPrefix) {
+	if strings.HasPrefix(req.URL.Path, maidenlanedevents.SubPathPrefix) {
 		err = g.sm.DeleteSubscription(req.Context(), params.ByName("id"))
 	} else {
 		err = g.sm.DeleteStream(req.Context(), params.ByName("id"))
@@ -846,7 +846,7 @@ func (g *smartContractGW) suspendOrResumeStream(res http.ResponseWriter, req *ht
 	res.WriteHeader(status)
 }
 
-func (g *smartContractGW) resolveAddressOrName(id string) (deployMsg *turbokeeperdmessages.DeployContract, registeredName string, info *contractInfo, err error) {
+func (g *smartContractGW) resolveAddressOrName(id string) (deployMsg *maidenlanedmessages.DeployContract, registeredName string, info *contractInfo, err error) {
 	deployMsg, info, err = g.loadDeployMsgForInstance(id)
 	if err != nil {
 		var origErr = err
@@ -862,7 +862,7 @@ func (g *smartContractGW) resolveAddressOrName(id string) (deployMsg *turbokeepe
 	return deployMsg, registeredName, info, err
 }
 
-func (g *smartContractGW) isSwaggerRequest(req *http.Request) (swaggerGen *turbokeeperdopenapi.ABI2Swagger, uiRequest, factoryOnly, abiRequest, refreshABI bool, from string) {
+func (g *smartContractGW) isSwaggerRequest(req *http.Request) (swaggerGen *maidenlanedopenapi.ABI2Swagger, uiRequest, factoryOnly, abiRequest, refreshABI bool, from string) {
 	req.ParseForm()
 	var swaggerRequest bool
 	if vs := req.Form["swagger"]; len(vs) > 0 {
@@ -901,7 +901,7 @@ func (g *smartContractGW) isSwaggerRequest(req *http.Request) (swaggerGen *turbo
 				}
 			}
 		}
-		swaggerGen = turbokeeperdopenapi.NewABI2Swagger(&conf)
+		swaggerGen = maidenlanedopenapi.NewABI2Swagger(&conf)
 	}
 	return
 }
@@ -938,8 +938,8 @@ func (g *smartContractGW) getContractOrABI(res http.ResponseWriter, req *http.Re
 	// For safety we always check our sanitized address index in memory, before checking the filesystem
 	var registeredName string
 	var err error
-	var deployMsg *turbokeeperdmessages.DeployContract
-	var info turbokeeperdmessages.TimeSortable
+	var deployMsg *maidenlanedmessages.DeployContract
+	var info maidenlanedmessages.TimeSortable
 	var abiID string
 	if prefix == "contract" {
 		if deployMsg, registeredName, info, err = g.resolveAddressOrName(params.ByName("address")); err != nil {
@@ -958,9 +958,9 @@ func (g *smartContractGW) getContractOrABI(res http.ResponseWriter, req *http.Re
 		g.writeHTMLForUI(prefix, id, from, (prefix == "abi"), factoryOnly, res)
 	} else if swaggerGen != nil {
 		addr := params.ByName("address")
-		runtimeABI, err := turbokeeperdbind.ABIMarshalingToABIRuntime(deployMsg.ABI)
+		runtimeABI, err := maidenlanedbind.ABIMarshalingToABIRuntime(deployMsg.ABI)
 		if err != nil {
-			g.gatewayErrReply(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayInvalidABI, err), 404)
+			g.gatewayErrReply(res, req, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayInvalidABI, err), 404)
 			return
 		}
 		swagger := g.swaggerForABI(swaggerGen, abiID, deployMsg.ContractName, factoryOnly, runtimeABI, deployMsg.DevDoc, addr, registeredName)
@@ -987,7 +987,7 @@ func (g *smartContractGW) getRemoteRegistrySwaggerOrABI(res http.ResponseWriter,
 
 	swaggerGen, uiRequest, factoryOnly, abiRequest, refreshABI, from := g.isSwaggerRequest(req)
 
-	var deployMsg *turbokeeperdmessages.DeployContract
+	var deployMsg *maidenlanedmessages.DeployContract
 	var err error
 	var isGateway = false
 	var prefix, id, addr string
@@ -1000,7 +1000,7 @@ func (g *smartContractGW) getRemoteRegistrySwaggerOrABI(res http.ResponseWriter,
 			g.gatewayErrReply(res, req, err, 500)
 			return
 		} else if deployMsg == nil {
-			err = turbokeeperderrors.Errorf(turbokeeperderrors.RemoteRegistryLookupGatewayNotFound)
+			err = maidenlanederrors.Errorf(maidenlanederrors.RemoteRegistryLookupGatewayNotFound)
 			g.gatewayErrReply(res, req, err, 404)
 			return
 		}
@@ -1013,7 +1013,7 @@ func (g *smartContractGW) getRemoteRegistrySwaggerOrABI(res http.ResponseWriter,
 			g.gatewayErrReply(res, req, err, 500)
 			return
 		} else if msg == nil {
-			err = turbokeeperderrors.Errorf(turbokeeperderrors.RemoteRegistryLookupInstanceNotFound)
+			err = maidenlanederrors.Errorf(maidenlanederrors.RemoteRegistryLookupInstanceNotFound)
 			g.gatewayErrReply(res, req, err, 404)
 			return
 		}
@@ -1024,9 +1024,9 @@ func (g *smartContractGW) getRemoteRegistrySwaggerOrABI(res http.ResponseWriter,
 	if uiRequest {
 		g.writeHTMLForUI(prefix, id, from, isGateway, factoryOnly, res)
 	} else if swaggerGen != nil {
-		runtimeABI, err := turbokeeperdbind.ABIMarshalingToABIRuntime(deployMsg.ABI)
+		runtimeABI, err := maidenlanedbind.ABIMarshalingToABIRuntime(deployMsg.ABI)
 		if err != nil {
-			g.gatewayErrReply(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayInvalidABI, err), 400)
+			g.gatewayErrReply(res, req, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayInvalidABI, err), 400)
 			return
 		}
 		swagger := g.swaggerForRemoteRegistry(swaggerGen, id, addr, factoryOnly, runtimeABI, deployMsg.DevDoc, req.URL.Path)
@@ -1059,7 +1059,7 @@ func (g *smartContractGW) registerContract(res http.ResponseWriter, req *http.Re
 	addrHexNo0x := strings.ToLower(strings.TrimPrefix(params.ByName("address"), "0x"))
 	addrCheck, _ := regexp.Compile("^[0-9a-z]{40}$")
 	if !addrCheck.MatchString(addrHexNo0x) {
-		g.gatewayErrReply(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayRegistrationSuppliedInvalidAddress), 404)
+		g.gatewayErrReply(res, req, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayRegistrationSuppliedInvalidAddress), 404)
 		return
 	}
 
@@ -1092,7 +1092,7 @@ func (g *smartContractGW) registerContract(res http.ResponseWriter, req *http.Re
 }
 
 func tempdir() string {
-	dir, _ := ioutil.TempDir("", "turbokeeperd")
+	dir, _ := ioutil.TempDir("", "maidenlaned")
 	log.Infof("tmpdir/create: %s", dir)
 	return dir
 }
@@ -1106,7 +1106,7 @@ func (g *smartContractGW) addABI(res http.ResponseWriter, req *http.Request, par
 	log.Infof("--> %s %s", req.Method, req.URL)
 
 	if err := req.ParseMultipartForm(maxFormParsingMemory); err != nil {
-		g.gatewayErrReply(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractInvalidFormData, err), 400)
+		g.gatewayErrReply(res, req, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractInvalidFormData, err), 400)
 		return
 	}
 
@@ -1141,7 +1141,7 @@ func (g *smartContractGW) addABI(res http.ResponseWriter, req *http.Request, par
 
 	preCompiled, err := g.compileMultipartFormSolidity(tempdir, req)
 	if err != nil {
-		g.gatewayErrReply(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractCompileFailed, err), 400)
+		g.gatewayErrReply(res, req, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractCompileFailed, err), 400)
 		return
 	}
 
@@ -1157,15 +1157,15 @@ func (g *smartContractGW) addABI(res http.ResponseWriter, req *http.Request, par
 		return
 	}
 
-	compiled, err := turbokeeperdeth.ProcessCompiled(preCompiled, req.FormValue("contract"), false)
+	compiled, err := maidenlanedeth.ProcessCompiled(preCompiled, req.FormValue("contract"), false)
 	if err != nil {
-		g.gatewayErrReply(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractPostCompileFailed, err), 400)
+		g.gatewayErrReply(res, req, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractPostCompileFailed, err), 400)
 		return
 	}
 
-	msg := &turbokeeperdmessages.DeployContract{}
-	msg.Headers.MsgType = turbokeeperdmessages.MsgTypeSendTransaction
-	msg.Headers.ID = turbokeeperdutils.UUIDv4()
+	msg := &maidenlanedmessages.DeployContract{}
+	msg.Headers.MsgType = maidenlanedmessages.MsgTypeSendTransaction
+	msg.Headers.ID = maidenlanedutils.UUIDv4()
 	info, err := g.storeDeployableABI(msg, compiled)
 	if err != nil {
 		g.gatewayErrReply(res, req, err, 500)
@@ -1183,7 +1183,7 @@ func (g *smartContractGW) compileMultipartFormSolidity(dir string, req *http.Req
 	rootFiles, err := ioutil.ReadDir(dir)
 	if err != nil {
 		log.Errorf("Failed to read dir '%s': %s", dir, err)
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractExtractedReadFailed)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractExtractedReadFailed)
 	}
 	for _, file := range rootFiles {
 		log.Debugf("multi-part: '%s' [dir=%t]", file.Name(), file.IsDir())
@@ -1193,18 +1193,18 @@ func (g *smartContractGW) compileMultipartFormSolidity(dir string, req *http.Req
 	}
 
 	evmVersion := req.FormValue("evm")
-	solcArgs := turbokeeperdeth.GetSolcArgs(evmVersion)
+	solcArgs := maidenlanedeth.GetSolcArgs(evmVersion)
 	if sourceFiles := req.Form["source"]; len(sourceFiles) > 0 {
 		solcArgs = append(solcArgs, sourceFiles...)
 	} else if len(solFiles) > 0 {
 		solcArgs = append(solcArgs, solFiles...)
 	} else {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractNoSOL)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractNoSOL)
 	}
 
-	solcVer, err := turbokeeperdeth.GetSolc(req.FormValue("compiler"))
+	solcVer, err := maidenlanedeth.GetSolc(req.FormValue("compiler"))
 	if err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractSolcVerFail, err)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractSolcVerFail, err)
 	}
 	solOptionsString := strings.Join(append([]string{solcVer.Path}, solcArgs...), " ")
 	log.Infof("Compiling: %s", solOptionsString)
@@ -1215,12 +1215,12 @@ func (g *smartContractGW) compileMultipartFormSolidity(dir string, req *http.Req
 	cmd.Stdout = &stdout
 	cmd.Dir = dir
 	if err := cmd.Run(); err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractCompileFailDetails, err, stderr.String())
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractCompileFailDetails, err, stderr.String())
 	}
 
 	compiled, err := compiler.ParseCombinedJSON(stdout.Bytes(), "", solcVer.Version, solcVer.Version, solOptionsString)
 	if err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractSolcOutputProcessFail, err)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractSolcOutputProcessFail, err)
 	}
 
 	return compiled, nil
@@ -1229,24 +1229,24 @@ func (g *smartContractGW) compileMultipartFormSolidity(dir string, req *http.Req
 func (g *smartContractGW) extractMultiPartFile(dir string, file *multipart.FileHeader) error {
 	fileName := file.Filename
 	if strings.ContainsAny(fileName, "/\\") {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractSlashes)
+		return maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractSlashes)
 	}
 	in, err := file.Open()
 	if err != nil {
 		log.Errorf("Failed opening '%s' for reading: %s", fileName, err)
-		return turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractUnzipRead)
+		return maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractUnzipRead)
 	}
 	defer in.Close()
 	outFileName := path.Join(dir, fileName)
 	out, err := os.OpenFile(outFileName, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Errorf("Failed opening '%s' for writing: %s", fileName, err)
-		return turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractUnzipWrite)
+		return maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractUnzipWrite)
 	}
 	written, err := io.Copy(out, in)
 	if err != nil {
 		log.Errorf("Failed writing '%s' from multi-part form: %s", fileName, err)
-		return turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractUnzipCopy)
+		return maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractUnzipCopy)
 	}
 	log.Debugf("multi-part: '%s' [%dKb]", fileName, written/1024)
 	return g.processIfArchive(dir, outFileName)
@@ -1260,7 +1260,7 @@ func (g *smartContractGW) processIfArchive(dir, fileName string) error {
 	}
 	err = z.(archiver.Unarchiver).Unarchive(fileName, dir)
 	if err != nil {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.RESTGatewayCompileContractUnzip, err)
+		return maidenlanederrors.Errorf(maidenlanederrors.RESTGatewayCompileContractUnzip, err)
 	}
 	return nil
 }
@@ -1289,7 +1289,7 @@ func (g *smartContractGW) writeHTMLForUI(prefix, id, from string, isGateway, fac
 		factoryOnlyQuery = "&factory"
 		helpHeader = `<p>Factory API to deploy contract instances</p>
   <p>Use the <code>[POST]</code> panel below to set the input parameters for your constructor, and tick <code>[TRY]</code> to deploy a contract instance.</p>
-  <p>If you want to configure a friendly API path name to invoke your contract, then set the <code>turbokeeperd-register</code> parameter.</p>`
+  <p>If you want to configure a friendly API path name to invoke your contract, then set the <code>maidenlaned-register</code> parameter.</p>`
 	} else {
 		hasMethodsMessage = `<li><code>GET</code> actions <b>never</b> write to the chain. Even for actions that update state - so you can simulate execution</li>
     <li><code>POST</code> actions against <code>/subscribe</code> paths marked <code>[event]</code> add subscriptions to event streams
@@ -1337,12 +1337,12 @@ func (g *smartContractGW) writeHTMLForUI(prefix, id, from string, isGateway, fac
         <div id="kaleido-quickstart-header" style="display: none;">
           <ul>
             <li>Authorization with SEE CONTRIBUTORS Application Credentials has already been performed when loading this page, and is passed to API calls by your browser.</code>
-            <li><code>POST</code> actions against Solidity methods will <b>write to the chain</b> unless <code>turbokeeperd-call</code> is set, or the method is marked <code>[read-only]</code>
+            <li><code>POST</code> actions against Solidity methods will <b>write to the chain</b> unless <code>maidenlaned-call</code> is set, or the method is marked <code>[read-only]</code>
             <ul>
-              <li>When <code>turbokeeperd-sync</code> is set, the response will not be returned until the transaction is mined <b>taking a few seconds</b></li>
-              <li>When <code>turbokeeperd-sync</code> is unset, the transaction is reliably streamed to the node over Kafka</li>
+              <li>When <code>maidenlaned-sync</code> is set, the response will not be returned until the transaction is mined <b>taking a few seconds</b></li>
+              <li>When <code>maidenlaned-sync</code> is unset, the transaction is reliably streamed to the node over Kafka</li>
               <li>Use the <a href="/replies" target="_blank" style="text-decoration: none">/replies</a> API route on Ethconnect to view receipts for streamed transactions</li>
-              <li>Gas limit estimation is performed automatically, unless <code>turbokeeperd-gas</code> is set.</li>
+              <li>Gas limit estimation is performed automatically, unless <code>maidenlaned-gas</code> is set.</li>
               <li>During the gas estimation we will return any revert messages if there is a execution failure.</li>
             </ul></li>
             ` + factoryMessage + `

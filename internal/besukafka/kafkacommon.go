@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdkafka
+package maidenlanedkafka
 
 import (
 	"crypto/tls"
@@ -26,8 +26,8 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -48,7 +48,7 @@ type KafkaCommonConf struct {
 		Username string
 		Password string
 	} `json:"sasl"`
-	TLS turbokeeperdutils.TLSConfig `json:"tls"`
+	TLS maidenlanedutils.TLSConfig `json:"tls"`
 }
 
 // KafkaCommon is the base interface for bridges that interact with Kafka
@@ -102,16 +102,16 @@ func (k *kafkaCommon) ValidateConf() error {
 // KafkaValidateConf validates supplied configuration
 func KafkaValidateConf(kconf *KafkaCommonConf) (err error) {
 	if kconf.TopicOut == "" {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.ConfigKafkaMissingOutputTopic)
+		return maidenlanederrors.Errorf(maidenlanederrors.ConfigKafkaMissingOutputTopic)
 	}
 	if kconf.TopicIn == "" {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.ConfigKafkaMissingInputTopic)
+		return maidenlanederrors.Errorf(maidenlanederrors.ConfigKafkaMissingInputTopic)
 	}
 	if kconf.ConsumerGroup == "" {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.ConfigKafkaMissingConsumerGroup)
+		return maidenlanederrors.Errorf(maidenlanederrors.ConfigKafkaMissingConsumerGroup)
 	}
-	if !turbokeeperdutils.AllOrNoneReqd(kconf.SASL.Username, kconf.SASL.Password) {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.ConfigKafkaMissingBadSASL)
+	if !maidenlanedutils.AllOrNoneReqd(kconf.SASL.Username, kconf.SASL.Password) {
+		err = maidenlanederrors.Errorf(maidenlanederrors.ConfigKafkaMissingBadSASL)
 		return
 	}
 	return
@@ -166,7 +166,7 @@ func (k *kafkaCommon) connect() (err error) {
 
 	log.Debugf("Kafka Bootstrap brokers: %s", k.conf.Brokers)
 	if len(k.conf.Brokers) == 0 || k.conf.Brokers[0] == "" {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.ConfigKafkaMissingBrokers)
+		err = maidenlanederrors.Errorf(maidenlanederrors.ConfigKafkaMissingBrokers)
 		return
 	}
 
@@ -174,7 +174,7 @@ func (k *kafkaCommon) connect() (err error) {
 	clientConf := sarama.NewConfig()
 
 	var tlsConfig *tls.Config
-	if tlsConfig, err = turbokeeperdutils.CreateTLSConfiguration(&k.conf.TLS); err != nil {
+	if tlsConfig, err = maidenlanedutils.CreateTLSConfiguration(&k.conf.TLS); err != nil {
 		return
 	}
 
@@ -197,7 +197,7 @@ func (k *kafkaCommon) connect() (err error) {
 	clientConf.Net.TLS.Config = tlsConfig
 	clientConf.ClientID = k.conf.ClientID
 	if clientConf.ClientID == "" {
-		clientConf.ClientID = turbokeeperdutils.UUIDv4()
+		clientConf.ClientID = maidenlanedutils.UUIDv4()
 	}
 	log.Debugf("Kafka ClientID: %s", clientConf.ClientID)
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdeth
+package maidenlanedeth
 
 import (
 	"bytes"
@@ -23,13 +23,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ethereum/go-ethereum/common/compiler"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 )
 
 const (
@@ -42,7 +42,7 @@ type CompiledSolidity struct {
 	ContractName string
 	Compiled     []byte
 	DevDoc       string
-	ABI          turbokeeperdbind.ABIMarshaling
+	ABI          maidenlanedbind.ABIMarshaling
 	ContractInfo *compiler.ContractInfo
 }
 
@@ -67,10 +67,10 @@ func getSolcExecutable(requestedVersion string) (string, error) {
 		if envVar := os.Getenv(envVarName); envVar != "" {
 			solc = envVar
 		} else {
-			return "", turbokeeperderrors.Errorf(turbokeeperderrors.CompilerVersionNotFound, v[1], v[2])
+			return "", maidenlanederrors.Errorf(maidenlanederrors.CompilerVersionNotFound, v[1], v[2])
 		}
 	} else if requestedVersion != "" {
-		return "", turbokeeperderrors.Errorf(turbokeeperderrors.CompilerVersionBadRequest)
+		return "", maidenlanederrors.Errorf(maidenlanederrors.CompilerVersionBadRequest)
 	}
 	log.Debugf("Solidity compiler solc binary: %s", solc)
 	return solc, nil
@@ -114,7 +114,7 @@ func CompileContract(soliditySource, contractName, requestedVersion, evmVersion 
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerFailedSolc, err, stderr.String())
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.CompilerFailedSolc, err, stderr.String())
 	}
 	c, _ := compiler.ParseCombinedJSON(stdout.Bytes(), soliditySource, s.Version, s.Version, strings.Join(solcArgs, " "))
 	return ProcessCompiled(c, contractName, true)
@@ -130,11 +130,11 @@ func ProcessCompiled(compiled map[string]*compiler.Contract, contractName string
 			contractName = "<stdin>:" + contractName
 		}
 		if _, ok := compiled[contractName]; !ok {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerOutputMissingContract, contractName, contractNames)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.CompilerOutputMissingContract, contractName, contractNames)
 		}
 		contract = compiled[contractName]
 	} else if len(contractNames) != 1 {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerOutputMultipleContracts, contractNames)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.CompilerOutputMultipleContracts, contractNames)
 	} else {
 		contractName = contractNames[0].String()
 		contract = compiled[contractName]
@@ -155,25 +155,25 @@ func packContract(contractName string, contract *compiler.Contract) (c *Compiled
 	}
 	c.Compiled, err = hexutil.Decode(contract.Code)
 	if err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerBytecodeInvalid, err)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.CompilerBytecodeInvalid, err)
 	}
 	if len(c.Compiled) == 0 {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerBytecodeEmpty, contractName)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.CompilerBytecodeEmpty, contractName)
 	}
 	// Pack the arguments for calling the contract
 	abiJSON, err := json.Marshal(contract.Info.AbiDefinition)
 	if err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerABISerialize, err)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.CompilerABISerialize, err)
 	}
-	var abi turbokeeperdbind.ABIMarshaling
+	var abi maidenlanedbind.ABIMarshaling
 	err = json.Unmarshal(abiJSON, &abi)
 	if err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerABIReRead, err)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.CompilerABIReRead, err)
 	}
 	c.ABI = abi
 	devdocBytes, err := json.Marshal(contract.Info.DeveloperDoc)
 	if err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.CompilerSerializeDevDocs, err)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.CompilerSerializeDevDocs, err)
 	}
 	c.DevDoc = string(devdocBytes)
 	return c, nil

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdeth
+package maidenlanedeth
 
 import (
 	"context"
@@ -29,10 +29,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdbind"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	log "github.com/sirupsen/logrus"
@@ -69,7 +69,7 @@ type TxnReceipt struct {
 
 // NewContractDeployTxn builds a new ethereum transaction from the supplied
 // SendTranasction message
-func NewContractDeployTxn(msg *turbokeeperdmessages.DeployContract, signer TXSigner) (tx *Txn, err error) {
+func NewContractDeployTxn(msg *maidenlanedmessages.DeployContract, signer TXSigner) (tx *Txn, err error) {
 
 	tx = &Txn{Signer: signer}
 
@@ -86,13 +86,13 @@ func NewContractDeployTxn(msg *turbokeeperdmessages.DeployContract, signer TXSig
 			return
 		}
 	} else {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.DeployTransactionMissingCode)
+		err = maidenlanederrors.Errorf(maidenlanederrors.DeployTransactionMissingCode)
 		return
 	}
 
 	// Build a runtime ABI from the serialized one
 	var typedArgs []interface{}
-	abi, err := turbokeeperdbind.ABIMarshalingToABIRuntime(compiled.ABI)
+	abi, err := maidenlanedbind.ABIMarshalingToABIRuntime(compiled.ABI)
 	if err == nil {
 		// Build correctly typed args for the ethereum call
 		typedArgs, err = tx.generateTypedArgs(msg.Parameters, &abi.Constructor)
@@ -104,7 +104,7 @@ func NewContractDeployTxn(msg *turbokeeperdmessages.DeployContract, signer TXSig
 	// Pack the arguments
 	packedCall, err := abi.Pack("", typedArgs...)
 	if err != nil {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendConstructorPackArgs, err)
+		err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendConstructorPackArgs, err)
 		return
 	}
 
@@ -129,7 +129,7 @@ func NewContractDeployTxn(msg *turbokeeperdmessages.DeployContract, signer TXSig
 }
 
 // CallMethod performs eth_call to return data from the chain
-func CallMethod(ctx context.Context, rpc RPCClient, signer TXSigner, from, addr string, value json.Number, methodABI *turbokeeperdbind.ABIMethod, msgParams []interface{}, blocknumber string) (map[string]interface{}, error) {
+func CallMethod(ctx context.Context, rpc RPCClient, signer TXSigner, from, addr string, value json.Number, methodABI *maidenlanedbind.ABIMethod, msgParams []interface{}, blocknumber string) (map[string]interface{}, error) {
 	log.Debugf("Calling method. ABI: %+v Params: %+v", methodABI, msgParams)
 	tx, err := buildTX(signer, from, addr, "", value, "", "", methodABI, msgParams)
 	if err != nil {
@@ -137,7 +137,7 @@ func CallMethod(ctx context.Context, rpc RPCClient, signer TXSigner, from, addr 
 	}
 	callOption := "latest"
 	// only allowed values are "earliest/latest/pending", "", a number string "12345" or a hex number "0xab23"
-	// "latest" and "" (no turbokeeperd-blocknumber given) are equivalent
+	// "latest" and "" (no maidenlaned-blocknumber given) are equivalent
 	if blocknumber != "" && blocknumber != "latest" {
 		isHex, _ := regexp.MatchString(`^0x[0-9a-fA-F]+$`, blocknumber)
 		if isHex || blocknumber == "earliest" || blocknumber == "pending" {
@@ -146,7 +146,7 @@ func CallMethod(ctx context.Context, rpc RPCClient, signer TXSigner, from, addr 
 			n := new(big.Int)
 			n, ok := n.SetString(blocknumber, 10)
 			if !ok {
-				return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionCallInvalidBlockNumber)
+				return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionCallInvalidBlockNumber)
 			}
 			callOption = hexutil.EncodeBig(n)
 		}
@@ -173,7 +173,7 @@ func ProcessRLPBytes(args abi.Arguments, retBytes []byte) map[string]interface{}
 	rawRetval, unpackErr := args.UnpackValues(retBytes)
 	var err error
 	if unpackErr != nil {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.UnpackOutputsFailed, unpackErr)
+		err = maidenlanederrors.Errorf(maidenlanederrors.UnpackOutputsFailed, unpackErr)
 	} else {
 		err = processOutputs(args, rawRetval, retval)
 	}
@@ -187,7 +187,7 @@ func processOutputs(args abi.Arguments, rawRetval []interface{}, retval map[stri
 	numOutputs := len(args)
 	if numOutputs > 0 {
 		if len(rawRetval) != numOutputs {
-			return turbokeeperderrors.Errorf(turbokeeperderrors.UnpackOutputsMismatchCount, numOutputs, len(rawRetval), rawRetval)
+			return maidenlanederrors.Errorf(maidenlanederrors.UnpackOutputsMismatchCount, numOutputs, len(rawRetval), rawRetval)
 		}
 		for idx, output := range args {
 			if err := genOutput(idx, retval, output, rawRetval[idx]); err != nil {
@@ -195,7 +195,7 @@ func processOutputs(args abi.Arguments, rawRetval []interface{}, retval map[stri
 			}
 		}
 	} else if rawRetval != nil {
-		return turbokeeperderrors.Errorf(turbokeeperderrors.UnpackOutputsMismatchNil, rawRetval)
+		return maidenlanederrors.Errorf(maidenlanederrors.UnpackOutputsMismatchNil, rawRetval)
 	}
 	return nil
 }
@@ -233,24 +233,24 @@ func mapOutput(argName, argType string, t *abi.Type, rawValue interface{}) (inte
 			kind == reflect.Uint64 {
 			return strconv.FormatUint(reflect.ValueOf(rawValue).Uint(), 10), nil
 		} else {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.UnpackOutputsMismatchType, "number",
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.UnpackOutputsMismatchType, "number",
 				argName, argType, rawType.Kind())
 		}
 	case abi.BoolTy:
 		if rawType.Kind() != reflect.Bool {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.UnpackOutputsMismatchType, "boolean",
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.UnpackOutputsMismatchType, "boolean",
 				argName, argType, rawType.Kind())
 		}
 		return rawValue, nil
 	case abi.StringTy:
 		if rawType.Kind() != reflect.String {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.UnpackOutputsMismatchType, "string array",
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.UnpackOutputsMismatchType, "string array",
 				argName, argType, rawType.Kind())
 		}
 		return reflect.ValueOf(rawValue).Interface().(string), nil
 	case abi.BytesTy, abi.FixedBytesTy, abi.AddressTy:
 		if (rawType.Kind() != reflect.Array && rawType.Kind() != reflect.Slice) || rawType.Elem().Kind() != reflect.Uint8 {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.UnpackOutputsMismatchType, "[]byte",
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.UnpackOutputsMismatchType, "[]byte",
 				argName, argType, rawType.Kind())
 		}
 		s := reflect.ValueOf(rawValue)
@@ -261,7 +261,7 @@ func mapOutput(argName, argType string, t *abi.Type, rawValue interface{}) (inte
 		return common.ToHex(arrayVal), nil
 	case abi.SliceTy, abi.ArrayTy:
 		if rawType.Kind() != reflect.Slice {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.UnpackOutputsMismatchType, "slice",
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.UnpackOutputsMismatchType, "slice",
 				argName, argType, rawType.Kind())
 		}
 		s := reflect.ValueOf(rawValue)
@@ -277,7 +277,7 @@ func mapOutput(argName, argType string, t *abi.Type, rawValue interface{}) (inte
 	case abi.TupleTy:
 		return genTupleMapOutput(argName, argType, t, rawValue)
 	default:
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.UnpackOutputsUnknownType,
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.UnpackOutputsUnknownType,
 			argName, argType, rawType.Kind())
 	}
 }
@@ -285,11 +285,11 @@ func mapOutput(argName, argType string, t *abi.Type, rawValue interface{}) (inte
 func genTupleMapOutput(argName, argType string, t *abi.Type, rawValue interface{}) (r map[string]interface{}, err error) {
 	reflectValue := reflect.ValueOf(rawValue)
 	if reflectValue.Kind() != reflect.Struct || reflectValue.Type() != t.TupleType {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.UnpackOutputsMismatchTupleType,
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.UnpackOutputsMismatchTupleType,
 			argName, argType, t.TupleType, rawValue)
 	}
 	if len(t.TupleRawNames) != reflectValue.NumField() {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.UnpackOutputsMismatchTupleFieldCount,
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.UnpackOutputsMismatchTupleFieldCount,
 			argName, argType, len(t.TupleRawNames), reflectValue.NumField())
 	}
 	returnMap := make(map[string]interface{})
@@ -304,12 +304,12 @@ func genTupleMapOutput(argName, argType string, t *abi.Type, rawValue interface{
 
 // NewSendTxn builds a new ethereum transaction from the supplied
 // SendTranasction message
-func NewSendTxn(msg *turbokeeperdmessages.SendTransaction, signer TXSigner) (tx *Txn, err error) {
+func NewSendTxn(msg *maidenlanedmessages.SendTransaction, signer TXSigner) (tx *Txn, err error) {
 
 	var methodABI *abi.Method
 	if msg.Method == nil || msg.Method.Name == "" {
 		if msg.MethodName == "" {
-			err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendMissingMethod)
+			err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendMissingMethod)
 			return
 		}
 		var abiInputs abi.Arguments
@@ -322,7 +322,7 @@ func NewSendTxn(msg *turbokeeperdmessages.SendTransaction, signer TXSigner) (tx 
 			return
 		}
 	} else {
-		methodABI, err = turbokeeperdbind.ABIElementMarshalingToABIMethod(msg.Method)
+		methodABI, err = maidenlanedbind.ABIElementMarshalingToABIMethod(msg.Method)
 		if err != nil {
 			return
 		}
@@ -364,7 +364,7 @@ func buildTX(signer TXSigner, msgFrom, msgTo string, msgNonce, msgValue, msgGas,
 	// Pack the arguments
 	packedArgs, err := methodABI.Inputs.Pack(typedArgs...)
 	if err != nil {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendMethodPackArgs, methodABI.RawName, err)
+		err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendMethodPackArgs, methodABI.RawName, err)
 		log.Errorf("Attempted to pack args %+v: %s", typedArgs, err)
 		return
 	}
@@ -385,7 +385,7 @@ func buildTX(signer TXSigner, msgFrom, msgTo string, msgNonce, msgValue, msgGas,
 func (tx *Txn) genEthTransaction(msgFrom, msgTo string, msgNonce, msgValue, msgGas, msgGasPrice json.Number, data []byte) (err error) {
 
 	if msgFrom != "" {
-		tx.From, err = turbokeeperdutils.StrToAddress("from", msgFrom)
+		tx.From, err = maidenlanedutils.StrToAddress("from", msgFrom)
 		if err != nil {
 			return
 		}
@@ -395,7 +395,7 @@ func (tx *Txn) genEthTransaction(msgFrom, msgTo string, msgNonce, msgValue, msgG
 	if msgNonce != "" {
 		nonce, err = msgNonce.Int64()
 		if err != nil {
-			err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendBadNonce, err)
+			err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendBadNonce, err)
 			return
 		}
 	}
@@ -403,7 +403,7 @@ func (tx *Txn) genEthTransaction(msgFrom, msgTo string, msgNonce, msgValue, msgG
 	value := big.NewInt(0)
 	if msgValue.String() != "" {
 		if _, ok := value.SetString(msgValue.String(), 10); !ok {
-			err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendBadValue, err)
+			err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendBadValue, err)
 			return
 		}
 	}
@@ -412,7 +412,7 @@ func (tx *Txn) genEthTransaction(msgFrom, msgTo string, msgNonce, msgValue, msgG
 	if msgGas != "" {
 		gas, err = msgGas.Int64()
 		if err != nil {
-			err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendBadGas, err)
+			err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendBadGas, err)
 			return
 		}
 	}
@@ -420,7 +420,7 @@ func (tx *Txn) genEthTransaction(msgFrom, msgTo string, msgNonce, msgValue, msgG
 	gasPrice := big.NewInt(0)
 	if msgGasPrice.String() != "" {
 		if _, ok := gasPrice.SetString(msgGasPrice.String(), 10); !ok {
-			err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendBadGasPrice)
+			err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendBadGasPrice)
 			return
 		}
 	}
@@ -428,7 +428,7 @@ func (tx *Txn) genEthTransaction(msgFrom, msgTo string, msgNonce, msgValue, msgG
 	var toAddr common.Address
 	var toStr string
 	if msgTo != "" {
-		if toAddr, err = turbokeeperdutils.StrToAddress("to", msgTo); err != nil {
+		if toAddr, err = maidenlanedutils.StrToAddress("to", msgTo); err != nil {
 			return
 		}
 		tx.EthTX = types.NewTransaction(uint64(nonce), toAddr, value, uint64(gas), gasPrice, data)
@@ -446,13 +446,13 @@ func (tx *Txn) genEthTransaction(msgFrom, msgTo string, msgNonce, msgValue, msgG
 func (tx *Txn) getInteger(methodName string, path string, requiredType *abi.Type, suppliedType reflect.Type, param interface{}) (val int64, err error) {
 	if suppliedType.Kind() == reflect.String {
 		if val, err = strconv.ParseInt(param.(string), 10, 64); err != nil {
-			err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadNumber, methodName, path)
+			err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadNumber, methodName, path)
 			return
 		}
 	} else if suppliedType.Kind() == reflect.Float64 {
 		val = int64(param.(float64))
 	} else {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadJSONTypeForNumber, methodName, path, requiredType, suppliedType)
+		err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadJSONTypeForNumber, methodName, path, requiredType, suppliedType)
 	}
 	return
 }
@@ -460,13 +460,13 @@ func (tx *Txn) getInteger(methodName string, path string, requiredType *abi.Type
 func (tx *Txn) getUnsignedInteger(methodName string, path string, requiredType *abi.Type, suppliedType reflect.Type, param interface{}) (val uint64, err error) {
 	if suppliedType.Kind() == reflect.String {
 		if val, err = strconv.ParseUint(param.(string), 10, 64); err != nil {
-			err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadNumber, methodName, path)
+			err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadNumber, methodName, path)
 			return
 		}
 	} else if suppliedType.Kind() == reflect.Float64 {
 		val = uint64(param.(float64))
 	} else {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadJSONTypeForNumber, methodName, path, requiredType, suppliedType)
+		err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadJSONTypeForNumber, methodName, path, requiredType, suppliedType)
 	}
 	return
 }
@@ -475,19 +475,19 @@ func (tx *Txn) getBigInteger(methodName string, path string, requiredType *abi.T
 	bigInt = big.NewInt(0)
 	if suppliedType.Kind() == reflect.String {
 		if _, ok := bigInt.SetString(param.(string), 10); !ok {
-			err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadNumber, methodName, path)
+			err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadNumber, methodName, path)
 		}
 	} else if suppliedType.Kind() == reflect.Float64 {
 		bigInt.SetInt64(int64(param.(float64)))
 	} else {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadJSONTypeForNumber, methodName, path, requiredType, suppliedType)
+		err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadJSONTypeForNumber, methodName, path, requiredType, suppliedType)
 	}
 	return
 }
 
 func (tx *Txn) generateTypedArrayOrSlice(methodName string, path string, requiredType *abi.Type, suppliedType reflect.Type, param interface{}) (interface{}, error) {
 	if suppliedType.Kind() != reflect.Slice {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadJSONTypeForArray, methodName, path, requiredType, suppliedType)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadJSONTypeForArray, methodName, path, requiredType, suppliedType)
 	}
 	paramV := reflect.ValueOf(param)
 	var genericSlice reflect.Value
@@ -526,10 +526,10 @@ func (tx *Txn) generateTupleFromMap(methodName string, path string, requiredType
 		tupleField := tuple.Field(i)
 		if suppliedType == nil {
 			// No known cases where nil can be assigned
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputNotAssignable, methodName, path, typedVal, inputElemName, requiredType.TupleElems[i])
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputNotAssignable, methodName, path, typedVal, inputElemName, requiredType.TupleElems[i])
 		}
 		if !suppliedType.AssignableTo(tupleField.Type()) {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputNotAssignable, methodName, path, typedVal, inputElemName, requiredType.TupleElems[i])
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputNotAssignable, methodName, path, typedVal, inputElemName, requiredType.TupleElems[i])
 		}
 		tupleField.Set(reflect.ValueOf(typedVal))
 	}
@@ -539,7 +539,7 @@ func (tx *Txn) generateTupleFromMap(methodName string, path string, requiredType
 func (tx *Txn) generateTypedArg(requiredType *abi.Type, param interface{}, methodName string, path string) (interface{}, error) {
 	suppliedType := reflect.TypeOf(param)
 	if suppliedType == nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadNull, methodName, path)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadNull, methodName, path)
 	}
 	switch requiredType.T {
 	case abi.IntTy, abi.UintTy:
@@ -584,20 +584,20 @@ func (tx *Txn) generateTypedArg(requiredType *abi.Type, param interface{}, metho
 		} else if suppliedType.Kind() == reflect.Bool {
 			return param.(bool), nil
 		}
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadJSONTypeForBoolean, methodName, path, requiredType, suppliedType)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadJSONTypeForBoolean, methodName, path, requiredType, suppliedType)
 	case abi.StringTy:
 		if suppliedType.Kind() == reflect.String {
 			return param.(string), nil
 		}
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadJSONTypeForString, methodName, path, suppliedType)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadJSONTypeForString, methodName, path, suppliedType)
 	case abi.AddressTy:
 		if suppliedType.Kind() == reflect.String {
 			if !common.IsHexAddress(param.(string)) {
-				return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeAddress, methodName, path, suppliedType)
+				return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeAddress, methodName, path, suppliedType)
 			}
 			return common.HexToAddress(param.(string)), nil
 		}
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadJSONTypeForAddress, methodName, path, requiredType, suppliedType)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadJSONTypeForAddress, methodName, path, requiredType, suppliedType)
 	case abi.BytesTy, abi.FixedBytesTy:
 		var bSlice []byte
 		if suppliedType.Kind() == reflect.Slice {
@@ -610,18 +610,18 @@ func (tx *Txn) generateTypedArg(requiredType *abi.Type, param interface{}, metho
 					valV = valV.Elem()
 				}
 				if valV.Kind() != reflect.Float64 {
-					return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadJSONTypeInNumericArray, methodName, path, requiredType, i, valV.Kind())
+					return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadJSONTypeInNumericArray, methodName, path, requiredType, i, valV.Kind())
 				}
 				floatVal := valV.Float()
 				if floatVal > 255 || floatVal < 0 {
-					return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadByteOutsideRange, methodName, path, requiredType)
+					return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadByteOutsideRange, methodName, path, requiredType)
 				}
 				bSlice[i] = byte(floatVal)
 			}
 		} else if suppliedType.Kind() == reflect.String {
 			bSlice = common.FromHex(param.(string))
 		} else {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadJSONTypeForBytes, methodName, path, requiredType, suppliedType)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadJSONTypeForBytes, methodName, path, requiredType, suppliedType)
 		}
 		if len(bSlice) == 0 {
 			return [0]byte{}, nil
@@ -637,11 +637,11 @@ func (tx *Txn) generateTypedArg(requiredType *abi.Type, param interface{}, metho
 		return tx.generateTypedArrayOrSlice(methodName, path, requiredType, suppliedType, param)
 	case abi.TupleTy:
 		if suppliedType.Kind() != reflect.Map || suppliedType.Key().Kind() != reflect.String {
-			return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeBadJSONTypeForTuple, methodName, path, requiredType, suppliedType)
+			return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeBadJSONTypeForTuple, methodName, path, requiredType, suppliedType)
 		}
 		return tx.generateTupleFromMap(methodName, path, requiredType, param.(map[string]interface{}))
 	default:
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTypeNotSupported, requiredType)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTypeNotSupported, requiredType)
 	}
 }
 
@@ -661,7 +661,7 @@ func (tx *Txn) generateTypedArgs(origParams []interface{}, method *abi.Method) (
 	var typedArgs []interface{}
 	for idx, inputArg := range method.Inputs {
 		if idx >= len(params) {
-			err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputCountMismatch, methodName, len(method.Inputs), len(params))
+			err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputCountMismatch, methodName, len(method.Inputs), len(params))
 			return nil, err
 		}
 		param := params[idx]
@@ -686,7 +686,7 @@ func (tx *Txn) generateTypedArgs(origParams []interface{}, method *abi.Method) (
 // A mix is tollerated by the code, but no usecase is known for that.
 func flattenParams(origParams []interface{}, inputs *abi.Arguments, lazyTyping bool) (params []interface{}, err error) {
 	if !lazyTyping && len(origParams) > len(*inputs) {
-		err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputTooManyParams, len(origParams), len(*inputs))
+		err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputTooManyParams, len(origParams), len(*inputs))
 	}
 	// Allows us to support
 	params = make([]interface{}, len(origParams))
@@ -708,18 +708,18 @@ func flattenParams(origParams []interface{}, inputs *abi.Arguments, lazyTyping b
 				typeStr, exists = mapParam["type"]
 			}
 			if !exists {
-				err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputStructureWrong, i)
+				err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputStructureWrong, i)
 				return
 			}
 			if reflect.TypeOf(typeStr).Kind() != reflect.String {
-				err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputInLineTypeArrayNotString, i)
+				err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputInLineTypeArrayNotString, i)
 				return
 			}
 			params[i] = value
 			// Set the type
 			var ethType abi.Type
 			if ethType, err = abi.NewType(typeStr.(string), "", []abi.ArgumentMarshaling{}); err != nil {
-				err = turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendInputInLineTypeUnknown, i, typeStr, err)
+				err = maidenlanederrors.Errorf(maidenlanederrors.TransactionSendInputInLineTypeUnknown, i, typeStr, err)
 				return
 			}
 			for len(*inputs) <= i {

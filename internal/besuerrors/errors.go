@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperderrors
+package maidenlanederrors
 
 import (
 	"fmt"
@@ -220,11 +220,11 @@ const (
 	// RESTGatewayMissingParameter did not supply a parameter required by the method
 	RESTGatewayMissingParameter = "Parameter '%s' of method '%s' was not specified in body or query parameters"
 	// RESTGatewayMissingFromAddress did not supply a signing address for the transaction
-	RESTGatewayMissingFromAddress = "Please specify a valid address in the 'turbokeeperd-from' query string parameter or x-turbokeeper-from HTTP header"
+	RESTGatewayMissingFromAddress = "Please specify a valid address in the 'maidenlaned-from' query string parameter or x-maidenlane-from HTTP header"
 	// RESTGatewaySubscribeMissingStreamParameter missed the ID of the stream when registering
 	RESTGatewaySubscribeMissingStreamParameter = "Must supply a 'stream' parameter in the body or query"
 	// RESTGatewayMixedPrivateForAndGroupID confused privacy group info, using simple/Tessera style as well as pre-defined/Orion style
-	RESTGatewayMixedPrivateForAndGroupID = "turbokeeperd-privatefor and turbokeeperd-privacygroupid are mutually exclusive"
+	RESTGatewayMixedPrivateForAndGroupID = "maidenlaned-privatefor and maidenlaned-privacygroupid are mutually exclusive"
 	// RESTGatewayEventManagerInitFailed constructor failure for event manager
 	RESTGatewayEventManagerInitFailed = "Event-stream subscription manager: %s"
 	// RESTGatewayEventStreamInvalid attempt to create an event stream with invalid parameters
@@ -430,14 +430,14 @@ const (
 	WebhooksDirectBadHeaders = "Failed to process headers in message"
 )
 
-type turbokeeperdError string
+type maidenlanedError string
 
-func (e turbokeeperdError) Error() string {
+func (e maidenlanedError) Error() string {
 	return string(e)
 }
 
 // Errorf creates an error (not yet translated, but an extensible interface for that using simple sprintf formatting rather than named i18n inserts)
 func Errorf(msg ErrorID, inserts ...interface{}) error {
-	var err error = turbokeeperdError(fmt.Sprintf(string(msg), inserts...))
+	var err error = maidenlanedError(fmt.Sprintf(string(msg), inserts...))
 	return errors.WithStack(err)
 }

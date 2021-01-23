@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdeth
+package maidenlanedeth
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 )
 
 // GetOrionTXCount uses the special Pantheon/Orion interface to check the
@@ -35,7 +35,7 @@ func GetOrionTXCount(ctx context.Context, rpc RPCClient, addr *common.Address, p
 
 	var txnCount hexutil.Uint64
 	if err := rpc.CallContext(ctx, &txnCount, "priv_getTransactionCount", addr, privacyGroup); err != nil {
-		return 0, turbokeeperderrors.Errorf(turbokeeperderrors.TransactionSendNonceFailWithPrivacyGroup, privacyGroup, err)
+		return 0, maidenlanederrors.Errorf(maidenlanederrors.TransactionSendNonceFailWithPrivacyGroup, privacyGroup, err)
 	}
 	callTime := time.Now().UTC().Sub(start)
 	log.Debugf("priv_getTransactionCount(%x,%s)=%d [%.2fs]", addr, privacyGroup, txnCount, callTime.Seconds())
@@ -52,7 +52,7 @@ func GetTransactionCount(ctx context.Context, rpc RPCClient, addr *common.Addres
 
 	var txnCount hexutil.Uint64
 	if err := rpc.CallContext(ctx, &txnCount, "eth_getTransactionCount", addr, blockNumber); err != nil {
-		return 0, turbokeeperderrors.Errorf(turbokeeperderrors.RPCCallReturnedError, "eth_getTransactionCount", err)
+		return 0, maidenlanederrors.Errorf(maidenlanederrors.RPCCallReturnedError, "eth_getTransactionCount", err)
 	}
 	callTime := time.Now().UTC().Sub(start)
 	log.Debugf("eth_getTransactionCount(%x,latest)=%d [%.2fs]", addr, txnCount, callTime.Seconds())

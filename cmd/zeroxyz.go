@@ -24,10 +24,10 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/icza/dyno"
-	"github.com/freight-trust/zeroxyz/internal/turbokeepererrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperkafka"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperrest"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperutils"
+	"github.com/freight-trust/zeroxyz/internal/maidenlaneerrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanekafka"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanerest"
+	"github.com/freight-trust/zeroxyz/internal/maidenlaneutils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -37,9 +37,9 @@ import (
 // to run with a set of individual commands as goroutines
 // (rather than the simple commandline mode that runs a single command)
 type ServerConfig struct {
-	KafkaBridges map[string]*turbokeeperkafka.KafkaBridgeConf `json:"kafka"`
-	Webhooks     map[string]*turbokeeperrest.RESTGatewayConf  `json:"webhooks"`
-	RESTGateways map[string]*turbokeeperrest.RESTGatewayConf  `json:"rest"`
+	KafkaBridges map[string]*maidenlanekafka.KafkaBridgeConf `json:"kafka"`
+	Webhooks     map[string]*maidenlanerest.RESTGatewayConf  `json:"webhooks"`
+	RESTGateways map[string]*maidenlanerest.RESTGatewayConf  `json:"rest"`
 	Plugins      PluginConfig                         `json:"plugins"`
 }
 
@@ -98,7 +98,7 @@ func initServer() (serverCmd *cobra.Command) {
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) (err error) {
 			if serverCmdConfig.Filename == "" {
-				err = turbokeepererrors.Errorf(turbokeepererrors.ConfigNoYAML)
+				err = maidenlaneerrors.Errorf(maidenlaneerrors.ConfigNoYAML)
 				return
 			}
 			return
@@ -116,14 +116,14 @@ func initServer() (serverCmd *cobra.Command) {
 func readServerConfig() (serverConfig *ServerConfig, err error) {
 	confBytes, err := ioutil.ReadFile(serverCmdConfig.Filename)
 	if err != nil {
-		err = turbokeepererrors.Errorf(turbokeepererrors.ConfigFileReadFailed, serverCmdConfig.Filename, err)
+		err = maidenlaneerrors.Errorf(maidenlaneerrors.ConfigFileReadFailed, serverCmdConfig.Filename, err)
 		return
 	}
 	if strings.ToLower(serverCmdConfig.Type) == "yaml" {
 		// Convert to JSON first
 		yamlGenericPayload := make(map[interface{}]interface{})
 		if err = yaml.Unmarshal(confBytes, &yamlGenericPayload); err != nil {
-			err = turbokeepererrors.Errorf(turbokeepererrors.ConfigYAMLParseFile, serverCmdConfig.Filename, err)
+			err = maidenlaneerrors.Errorf(maidenlaneerrors.ConfigYAMLParseFile, serverCmdConfig.Filename, err)
 			return
 		}
 		genericPayload := dyno.ConvertMapI2MapS(yamlGenericPayload).(map[string]interface{})
@@ -133,7 +133,7 @@ func readServerConfig() (serverConfig *ServerConfig, err error) {
 	serverConfig = &ServerConfig{}
 	err = json.Unmarshal(confBytes, serverConfig)
 	if err != nil {
-		err = turbokeepererrors.Errorf(turbokeepererrors.ConfigYAMLPostParseFile, serverCmdConfig.Filename, err)
+		err = maidenlaneerrors.Errorf(maidenlaneerrors.ConfigYAMLPostParseFile, serverCmdConfig.Filename, err)
 		return
 	}
 
@@ -150,7 +150,7 @@ func startServer() (err error) {
 	}
 
 	if rootConfig.PrintYAML {
-		b, err := turbokeeperutils.MarshalToYAML(&serverConfig)
+		b, err := maidenlaneutils.MarshalToYAML(&serverConfig)
 		print("# Full YAML configuration processed from supplied file\n" + string(b))
 		return err
 	}
@@ -159,7 +159,7 @@ func startServer() (err error) {
 
 	var dontPrintYaml = false
 	for name, conf := range serverConfig.KafkaBridges {
-		kafkaBridge := turbokeeperkafka.NewKafkaBridge(&dontPrintYaml)
+		kafkaBridge := maidenlanekafka.NewKafkaBridge(&dontPrintYaml)
 		kafkaBridge.SetConf(conf)
 		if err := kafkaBridge.ValidateConf(); err != nil {
 			return err
@@ -174,13 +174,13 @@ func startServer() (err error) {
 	}
 	// Merge in legacy named 'webbhooks' configs
 	if serverConfig.RESTGateways == nil {
-		serverConfig.RESTGateways = make(map[string]*turbokeeperrest.RESTGatewayConf)
+		serverConfig.RESTGateways = make(map[string]*maidenlanerest.RESTGatewayConf)
 	}
 	for name, conf := range serverConfig.Webhooks {
 		serverConfig.RESTGateways[name] = conf
 	}
 	for name, conf := range serverConfig.RESTGateways {
-		restGateway := turbokeeperrest.NewRESTGateway(&dontPrintYaml)
+		restGateway := maidenlanerest.NewRESTGateway(&dontPrintYaml)
 		restGateway.SetConf(conf)
 		if err := restGateway.ValidateConf(); err != nil {
 			return err
@@ -207,10 +207,10 @@ func init() {
 	serverCmd := initServer()
 	rootCmd.AddCommand(serverCmd)
 
-	kafkaBridge := turbokeeperkafka.NewKafkaBridge(&rootConfig.PrintYAML)
+	kafkaBridge := maidenlanekafka.NewKafkaBridge(&rootConfig.PrintYAML)
 	rootCmd.AddCommand(kafkaBridge.CobraInit())
 
-	restGateway := turbokeeperrest.NewRESTGateway(&rootConfig.PrintYAML)
+	restGateway := maidenlanerest.NewRESTGateway(&rootConfig.PrintYAML)
 	rootCmd.AddCommand(restGateway.CobraInit("webhooks")) // for backwards compatibility
 	rootCmd.AddCommand(restGateway.CobraInit("rest"))
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdrest
+package maidenlanedrest
 
 import (
 	"context"
@@ -21,16 +21,16 @@ import (
 	"sync"
 
 	"github.com/Shopify/sarama"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdkafka"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedkafka"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
 	log "github.com/sirupsen/logrus"
 )
 
 // webhooksKafka provides the HTTP -> Kafka bridge functionality for zeroxyz
 type webhooksKafka struct {
-	kafka       turbokeeperdkafka.KafkaCommon
+	kafka       maidenlanedkafka.KafkaCommon
 	receipts    *receiptStore
 	sendCond    *sync.Cond
 	pendingMsgs map[string]bool
@@ -50,10 +50,10 @@ func newWebhooksKafkaBase(receipts *receiptStore) *webhooksKafka {
 }
 
 // newWebhooksKafka constructor
-func newWebhooksKafka(kconf *turbokeeperdkafka.KafkaCommonConf, receipts *receiptStore) (w *webhooksKafka) {
+func newWebhooksKafka(kconf *maidenlanedkafka.KafkaCommonConf, receipts *receiptStore) (w *webhooksKafka) {
 	w = newWebhooksKafkaBase(receipts)
-	kf := &turbokeeperdkafka.SaramaKafkaFactory{}
-	w.kafka = turbokeeperdkafka.NewKafkaCommon(kf, kconf, w)
+	kf := &maidenlanedkafka.SaramaKafkaFactory{}
+	w.kafka = maidenlanedkafka.NewKafkaCommon(kf, kconf, w)
 	return
 }
 
@@ -80,7 +80,7 @@ func (w *webhooksKafka) waitForSend(msgID string) (msg *sarama.ProducerMessage, 
 }
 
 // ConsumerMessagesLoop - consume replies
-func (w *webhooksKafka) ConsumerMessagesLoop(consumer turbokeeperdkafka.KafkaConsumer, producer turbokeeperdkafka.KafkaProducer, wg *sync.WaitGroup) {
+func (w *webhooksKafka) ConsumerMessagesLoop(consumer maidenlanedkafka.KafkaConsumer, producer maidenlanedkafka.KafkaProducer, wg *sync.WaitGroup) {
 	for msg := range consumer.Messages() {
 		w.receipts.processReply(msg.Value)
 
@@ -91,13 +91,13 @@ func (w *webhooksKafka) ConsumerMessagesLoop(consumer turbokeeperdkafka.KafkaCon
 }
 
 // ProducerErrorLoop - consume errors
-func (w *webhooksKafka) ProducerErrorLoop(consumer turbokeeperdkafka.KafkaConsumer, producer turbokeeperdkafka.KafkaProducer, wg *sync.WaitGroup) {
+func (w *webhooksKafka) ProducerErrorLoop(consumer maidenlanedkafka.KafkaConsumer, producer maidenlanedkafka.KafkaProducer, wg *sync.WaitGroup) {
 	log.Debugf("Webhooks listening for errors sending to Kafka")
 	for err := range producer.Errors() {
 		log.Errorf("Error sending message: %s", err)
 		if err.Msg == nil || err.Msg.Metadata == nil {
 			// This should not be possible
-			panic(turbokeeperderrors.Errorf(turbokeeperderrors.WebhooksKafkaUnexpectedErrFmt, err))
+			panic(maidenlanederrors.Errorf(maidenlanederrors.WebhooksKafkaUnexpectedErrFmt, err))
 		}
 		msgID := err.Msg.Metadata.(string)
 		w.sendCond.L.Lock()
@@ -112,13 +112,13 @@ func (w *webhooksKafka) ProducerErrorLoop(consumer turbokeeperdkafka.KafkaConsum
 }
 
 // ProducerSuccessLoop - consume successes
-func (w *webhooksKafka) ProducerSuccessLoop(consumer turbokeeperdkafka.KafkaConsumer, producer turbokeeperdkafka.KafkaProducer, wg *sync.WaitGroup) {
+func (w *webhooksKafka) ProducerSuccessLoop(consumer maidenlanedkafka.KafkaConsumer, producer maidenlanedkafka.KafkaProducer, wg *sync.WaitGroup) {
 	log.Debugf("Webhooks listening for successful sends to Kafka")
 	for msg := range producer.Successes() {
 		log.Infof("Webhooks sent message ok: %s", msg.Metadata)
 		if msg.Metadata == nil {
 			// This should not be possible
-			panic(turbokeeperderrors.Errorf(turbokeeperderrors.WebhooksKafkaDeliveryReportNoMeta, msg))
+			panic(maidenlanederrors.Errorf(maidenlanederrors.WebhooksKafkaDeliveryReportNoMeta, msg))
 		}
 		msgID := msg.Metadata.(string)
 		w.sendCond.L.Lock()
@@ -137,7 +137,7 @@ func (w *webhooksKafka) sendWebhookMsg(ctx context.Context, key, msgID string, m
 	// Reseialize back to JSON with the headers
 	payloadToForward, err := json.Marshal(&msg)
 	if err != nil {
-		return "", 500, turbokeeperderrors.Errorf(turbokeeperderrors.WebhooksKafkaYAMLtoJSON, err)
+		return "", 500, maidenlanederrors.Errorf(maidenlanederrors.WebhooksKafkaYAMLtoJSON, err)
 	}
 	if ack {
 		w.setMsgPending(msgID)
@@ -150,11 +150,11 @@ func (w *webhooksKafka) sendWebhookMsg(ctx context.Context, key, msgID string, m
 		Value:    sarama.ByteEncoder(payloadToForward),
 		Metadata: msgID,
 	}
-	accessToken := turbokeeperdauth.GetAccessToken(ctx)
+	accessToken := maidenlanedauth.GetAccessToken(ctx)
 	if accessToken != "" {
 		sentMsg.Headers = []sarama.RecordHeader{
 			{
-				Key:   []byte(turbokeeperdmessages.RecordHeaderAccessToken),
+				Key:   []byte(maidenlanedmessages.RecordHeaderAccessToken),
 				Value: []byte(accessToken),
 			},
 		}
@@ -165,7 +165,7 @@ func (w *webhooksKafka) sendWebhookMsg(ctx context.Context, key, msgID string, m
 	if ack {
 		successMsg, err := w.waitForSend(msgID)
 		if err != nil {
-			return "", 502, turbokeeperderrors.Errorf(turbokeeperderrors.WebhooksKafkaErr, err)
+			return "", 502, maidenlanederrors.Errorf(maidenlanederrors.WebhooksKafkaErr, err)
 		}
 		msgAck = fmt.Sprintf("%s:%d:%d", successMsg.Topic, successMsg.Partition, successMsg.Offset)
 	}

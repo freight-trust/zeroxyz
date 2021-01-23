@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdeth
+package maidenlanedeth
 
 import (
 	"context"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 )
 
 // OrionPrivacyGroup is the result of the priv_findPrivacyGroup call
@@ -41,11 +41,11 @@ func GetOrionPrivacyGroup(ctx context.Context, rpc RPCClient, addr *common.Addre
 	var privacyGroups []OrionPrivacyGroup
 	var privacyGroup string
 	if err := rpc.CallContext(ctx, &privacyGroups, "priv_findPrivacyGroup", allMembers); err != nil {
-		return "", turbokeeperderrors.Errorf(turbokeeperderrors.RPCCallReturnedError, "priv_findPrivacyGroup", err)
+		return "", maidenlanederrors.Errorf(maidenlanederrors.RPCCallReturnedError, "priv_findPrivacyGroup", err)
 	}
 	if len(privacyGroups) == 0 {
 		if err := rpc.CallContext(ctx, &privacyGroup, "priv_createPrivacyGroup", params); err != nil {
-			return "", turbokeeperderrors.Errorf(turbokeeperderrors.RPCCallReturnedError, "priv_createPrivacyGroup", err)
+			return "", maidenlanederrors.Errorf(maidenlanederrors.RPCCallReturnedError, "priv_createPrivacyGroup", err)
 		}
 	} else {
 		privacyGroup = privacyGroups[0].PrivacyGroupID

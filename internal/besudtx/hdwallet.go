@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdtx
+package maidenlanedtx
 
 import (
 	"bytes"
@@ -26,9 +26,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	ecrypto "github.com/ethereum/go-ethereum/crypto"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdeth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -42,7 +42,7 @@ var hdWalletFromAddressMatcher = regexp.MustCompile("(?i)^hd-([^-]+)-([^-]+)-(\\
 
 // HDWalletConf configuration
 type HDWalletConf struct {
-	turbokeeperdutils.HTTPRequesterConf
+	maidenlanedutils.HTTPRequesterConf
 	// URLTemplate is a go template such as: "https://someconstant-{{.InstanceID}}/api/v1/{{.WalletID}}/{{.Index}}"
 	URLTemplate string                `json:"urlTemplate"`
 	ChainID     string                `json:"chainID"`
@@ -59,7 +59,7 @@ type hdWallet struct {
 	conf        *HDWalletConf
 	urlTemplate *template.Template
 	chainID     big.Int
-	hr          *turbokeeperdutils.HTTPRequester
+	hr          *maidenlanedutils.HTTPRequester
 }
 
 // HDWalletRequest is the struct that is extracted from a specially formatted 'from' string, by IsHDWalletRequest
@@ -71,7 +71,7 @@ type HDWalletRequest struct {
 
 // HDWallet interface
 type HDWallet interface {
-	SignerFor(request *HDWalletRequest) (turbokeeperdeth.TXSigner, error)
+	SignerFor(request *HDWalletRequest) (maidenlanedeth.TXSigner, error)
 }
 
 type hdwalletSigner struct {
@@ -85,7 +85,7 @@ func newHDWallet(conf *HDWalletConf) HDWallet {
 	hd := &hdWallet{
 		conf:        conf,
 		urlTemplate: template.Must(template.New("urlTemplate").Parse(conf.URLTemplate)),
-		hr:          turbokeeperdutils.NewHTTPRequester("HDWallet", &conf.HTTPRequesterConf),
+		hr:          maidenlanedutils.NewHTTPRequester("HDWallet", &conf.HTTPRequesterConf),
 	}
 	propNames := &conf.PropNames
 	if propNames.Address == "" {
@@ -110,7 +110,7 @@ func IsHDWalletRequest(fromAddr string) *HDWalletRequest {
 	return nil
 }
 
-func (hd *hdWallet) SignerFor(request *HDWalletRequest) (turbokeeperdeth.TXSigner, error) {
+func (hd *hdWallet) SignerFor(request *HDWalletRequest) (maidenlanedeth.TXSigner, error) {
 
 	urlStr := &strings.Builder{}
 	hd.urlTemplate.Execute(urlStr, request)
@@ -118,23 +118,23 @@ func (hd *hdWallet) SignerFor(request *HDWalletRequest) (turbokeeperdeth.TXSigne
 	result, err := hd.hr.DoRequest("GET", urlStr.String(), nil)
 	if err != nil {
 		log.Errorf("HDWallet request failed: %s", err)
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.HDWalletSigningFailed)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.HDWalletSigningFailed)
 	}
 
 	address, err := hd.hr.GetResponseString(result, hd.conf.PropNames.Address, false)
 	if err != nil {
 		log.Errorf("Missing address in response: %s", err)
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.HDWalletSigningBadData)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.HDWalletSigningBadData)
 	}
 	keyStr, ok := result[hd.conf.PropNames.PrivateKey].(string)
 	if !ok {
 		log.Errorf("Missing entry in response")
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.HDWalletSigningBadData)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.HDWalletSigningBadData)
 	}
 	key, err := ecrypto.HexToECDSA(strings.TrimPrefix(keyStr, "0x"))
 	if err != nil {
 		log.Errorf("Bad hex value in response '%s': %s", keyStr, err)
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.HDWalletSigningBadData)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.HDWalletSigningBadData)
 	}
 
 	return &hdwalletSigner{

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdeth
+package maidenlanedeth
 
 import (
 	"context"
@@ -20,8 +20,8 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -48,7 +48,7 @@ func RPCConnect(conf *RPCConnOpts) (RPCClientAll, error) {
 	}
 	rpcClient, err := rpc.Dial(conf.URL)
 	if err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.RPCConnectFailed, u, err)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.RPCConnectFailed, u, err)
 	}
 	log.Infof("New JSON/RPC connection established")
 	log.Debugf("JSON/RPC connected to %s", u)
@@ -92,9 +92,9 @@ func (sw *subWrapper) Unsubscribe() {
 }
 
 func (w *rpcWrapper) CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error {
-	if err := turbokeeperdauth.AuthRPC(ctx, method, args...); err != nil {
+	if err := maidenlanedauth.AuthRPC(ctx, method, args...); err != nil {
 		log.Errorf("JSON/RPC %s - not authorized: %s", method, err)
-		return turbokeeperderrors.Errorf(turbokeeperderrors.Unauthorized)
+		return maidenlanederrors.Errorf(maidenlanederrors.Unauthorized)
 	}
 	log.Tracef("RPC [%s] --> %+v", method, args)
 	err := w.rpc.CallContext(ctx, result, method, args...)
@@ -103,9 +103,9 @@ func (w *rpcWrapper) CallContext(ctx context.Context, result interface{}, method
 }
 
 func (w *rpcWrapper) Subscribe(ctx context.Context, namespace string, channel interface{}, args ...interface{}) (RPCClientSubscription, error) {
-	if err := turbokeeperdauth.AuthRPCSubscribe(ctx, namespace, channel, args...); err != nil {
+	if err := maidenlanedauth.AuthRPCSubscribe(ctx, namespace, channel, args...); err != nil {
 		log.Errorf("JSON/RPC Subscribe - not authorized: %s", err)
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.Unauthorized)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.Unauthorized)
 	}
 	tSub, err := w.rpc.Subscribe(ctx, namespace, channel, args...)
 	return &subWrapper{s: tSub}, err

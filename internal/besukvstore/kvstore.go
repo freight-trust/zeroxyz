@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdkvstore
+package maidenlanedkvstore
 
 import (
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
@@ -103,7 +103,7 @@ func NewLDBKeyValueStore(ldbPath string) (kv KVStore, err error) {
 		path: ldbPath,
 	}
 	if store.db, err = leveldb.OpenFile(ldbPath, nil); err != nil {
-		return nil, turbokeeperderrors.Errorf(turbokeeperderrors.KVStoreDBLoad, ldbPath, err)
+		return nil, maidenlanederrors.Errorf(maidenlanederrors.KVStoreDBLoad, ldbPath, err)
 	}
 	kv = store
 	return

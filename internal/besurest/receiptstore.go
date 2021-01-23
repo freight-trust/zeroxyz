@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package turbokeeperdrest
+package maidenlanedrest
 
 import (
 	"encoding/json"
@@ -23,11 +23,11 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdauth"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdcontracts"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperderrors"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdmessages"
-	"github.com/freight-trust/zeroxyz/internal/turbokeeperdutils"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedcontracts"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
+	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -47,10 +47,10 @@ type ReceiptStorePersistence interface {
 type receiptStore struct {
 	conf            *ReceiptStoreConf
 	persistence     ReceiptStorePersistence
-	smartContractGW turbokeeperdcontracts.SmartContractGateway
+	smartContractGW maidenlanedcontracts.SmartContractGateway
 }
 
-func newReceiptStore(conf *ReceiptStoreConf, persistence ReceiptStorePersistence, smartContractGW turbokeeperdcontracts.SmartContractGateway) *receiptStore {
+func newReceiptStore(conf *ReceiptStoreConf, persistence ReceiptStorePersistence, smartContractGW maidenlanedcontracts.SmartContractGateway) *receiptStore {
 	return &receiptStore{
 		conf:            conf,
 		persistence:     persistence,
@@ -83,24 +83,24 @@ func (r *receiptStore) processReply(msgBytes []byte) {
 	}
 
 	// The one field we require is the original ID (as it's the key in MongoDB)
-	requestID := turbokeeperdutils.GetMapString(headers, "requestId")
+	requestID := maidenlanedutils.GetMapString(headers, "requestId")
 	if requestID == "" {
 		log.Errorf("Failed to extract headers.requestId from '%+v'", parsedMsg)
 		return
 	}
-	reqOffset := turbokeeperdutils.GetMapString(headers, "reqOffset")
-	msgType := turbokeeperdutils.GetMapString(headers, "type")
-	contractAddr := turbokeeperdutils.GetMapString(parsedMsg, "contractAddress")
+	reqOffset := maidenlanedutils.GetMapString(headers, "reqOffset")
+	msgType := maidenlanedutils.GetMapString(headers, "type")
+	contractAddr := maidenlanedutils.GetMapString(parsedMsg, "contractAddress")
 	result := ""
-	if msgType == turbokeeperdmessages.MsgTypeError {
-		result = turbokeeperdutils.GetMapString(parsedMsg, "errorMessage")
+	if msgType == maidenlanedmessages.MsgTypeError {
+		result = maidenlanedutils.GetMapString(parsedMsg, "errorMessage")
 	} else {
-		result = turbokeeperdutils.GetMapString(parsedMsg, "transactionHash")
+		result = maidenlanedutils.GetMapString(parsedMsg, "transactionHash")
 	}
 	log.Infof("Received reply message. requestId='%s' reqOffset='%s' type='%s': %s", requestID, reqOffset, msgType, result)
 
-	if r.smartContractGW != nil && msgType == turbokeeperdmessages.MsgTypeTransactionSuccess && contractAddr != "" {
-		var receipt turbokeeperdmessages.TransactionReceipt
+	if r.smartContractGW != nil && msgType == maidenlanedmessages.MsgTypeTransactionSuccess && contractAddr != "" {
+		var receipt maidenlanedmessages.TransactionReceipt
 		if err := json.Unmarshal(msgBytes, &receipt); err == nil {
 			if err = r.smartContractGW.PostDeploy(&receipt); err != nil {
 				log.Errorf("Failed to process receipt in smart contract gateway: %s", err)
@@ -128,7 +128,7 @@ func (r *receiptStore) marshalAndReply(res http.ResponseWriter, req *http.Reques
 	resBytes, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		log.Errorf("Error serializing receipts: %s", err)
-		sendRESTError(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.ReceiptStoreSerializeResponse), 500)
+		sendRESTError(res, req, maidenlanederrors.Errorf(maidenlanederrors.ReceiptStoreSerializeResponse), 500)
 		return
 	}
 	status := 200
@@ -142,15 +142,15 @@ func (r *receiptStore) marshalAndReply(res http.ResponseWriter, req *http.Reques
 func (r *receiptStore) getReplies(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	log.Infof("--> %s %s", req.Method, req.URL)
 
-	err := turbokeeperdauth.AuthListAsyncReplies(req.Context())
+	err := maidenlanedauth.AuthListAsyncReplies(req.Context())
 	if err != nil {
-		sendRESTError(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.Unauthorized), 401)
+		sendRESTError(res, req, maidenlanederrors.Errorf(maidenlanederrors.Unauthorized), 401)
 		return
 	}
 
 	res.Header().Set("Content-Type", "application/json")
 	if r.persistence == nil {
-		sendRESTError(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.ReceiptStoreDisabled), 405)
+		sendRESTError(res, req, maidenlanederrors.Errorf(maidenlanederrors.ReceiptStoreDisabled), 405)
 		return
 	}
 
@@ -163,7 +163,7 @@ func (r *receiptStore) getReplies(res http.ResponseWriter, req *http.Request, pa
 		for idx, id := range ids {
 			if !uuidCharsVerifier.MatchString(id) {
 				log.Errorf("Invalid id '%s' %d", id, idx)
-				sendRESTError(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.ReceiptStoreInvalidRequestID), 400)
+				sendRESTError(res, req, maidenlanederrors.Errorf(maidenlanederrors.ReceiptStoreInvalidRequestID), 400)
 				return
 			}
 		}
@@ -175,14 +175,14 @@ func (r *receiptStore) getReplies(res http.ResponseWriter, req *http.Request, pa
 		if customLimit, err := strconv.ParseInt(limitStr, 10, 32); err == nil {
 			if int(customLimit) > r.conf.QueryLimit {
 				log.Errorf("Invalid limit value: %s", err)
-				sendRESTError(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.ReceiptStoreInvalidRequestMaxLimit, r.conf.QueryLimit), 400)
+				sendRESTError(res, req, maidenlanederrors.Errorf(maidenlanederrors.ReceiptStoreInvalidRequestMaxLimit, r.conf.QueryLimit), 400)
 				return
 			} else if customLimit > 0 {
 				limit = int(customLimit)
 			}
 		} else {
 			log.Errorf("Invalid limit value: %s", err)
-			sendRESTError(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.ReceiptStoreInvalidRequestBadLimit), 400)
+			sendRESTError(res, req, maidenlanederrors.Errorf(maidenlanederrors.ReceiptStoreInvalidRequestBadLimit), 400)
 			return
 		}
 	}
@@ -195,7 +195,7 @@ func (r *receiptStore) getReplies(res http.ResponseWriter, req *http.Request, pa
 			skip = int(skipI64)
 		} else {
 			log.Errorf("Invalid skip value: %s", err)
-			sendRESTError(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.ReceiptStoreInvalidRequestBadSkip), 400)
+			sendRESTError(res, req, maidenlanederrors.Errorf(maidenlanederrors.ReceiptStoreInvalidRequestBadSkip), 400)
 			return
 		}
 	}
@@ -209,7 +209,7 @@ func (r *receiptStore) getReplies(res http.ResponseWriter, req *http.Request, pa
 		} else {
 			if sinceEpochMS, err = strconv.ParseInt(since, 10, 64); err != nil {
 				log.Errorf("since '%s' cannot be parsed as RFC3339 or millisecond timestamp: %s", since, err)
-				sendRESTError(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.ReceiptStoreInvalidRequestBadSince), 400)
+				sendRESTError(res, req, maidenlanederrors.Errorf(maidenlanederrors.ReceiptStoreInvalidRequestBadSince), 400)
 			}
 		}
 	}
@@ -221,7 +221,7 @@ func (r *receiptStore) getReplies(res http.ResponseWriter, req *http.Request, pa
 	results, err := r.persistence.GetReceipts(skip, limit, ids, sinceEpochMS, from, to)
 	if err != nil {
 		log.Errorf("Error querying replies: %s", err)
-		sendRESTError(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.ReceiptStoreFailedQuery, err), 500)
+		sendRESTError(res, req, maidenlanederrors.Errorf(maidenlanederrors.ReceiptStoreFailedQuery, err), 500)
 		return
 	}
 	log.Debugf("Replies query: skip=%d limit=%d replies=%d", skip, limit, len(*results))
@@ -233,9 +233,9 @@ func (r *receiptStore) getReplies(res http.ResponseWriter, req *http.Request, pa
 func (r *receiptStore) getReply(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	log.Infof("--> %s %s", req.Method, req.URL)
 
-	err := turbokeeperdauth.AuthReadAsyncReplyByUUID(req.Context())
+	err := maidenlanedauth.AuthReadAsyncReplyByUUID(req.Context())
 	if err != nil {
-		sendRESTError(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.Unauthorized), 401)
+		sendRESTError(res, req, maidenlanederrors.Errorf(maidenlanederrors.Unauthorized), 401)
 		return
 	}
 
@@ -244,10 +244,10 @@ func (r *receiptStore) getReply(res http.ResponseWriter, req *http.Request, para
 	result, err := r.persistence.GetReceipt(requestID)
 	if err != nil {
 		log.Errorf("Error querying reply: %s", err)
-		sendRESTError(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.ReceiptStoreFailedQuerySingle, err), 500)
+		sendRESTError(res, req, maidenlanederrors.Errorf(maidenlanederrors.ReceiptStoreFailedQuerySingle, err), 500)
 		return
 	} else if result == nil {
-		sendRESTError(res, req, turbokeeperderrors.Errorf(turbokeeperderrors.ReceiptStoreFailedNotFound), 404)
+		sendRESTError(res, req, maidenlanederrors.Errorf(maidenlanederrors.ReceiptStoreFailedNotFound), 404)
 		log.Infof("Reply not found")
 		return
 	}
