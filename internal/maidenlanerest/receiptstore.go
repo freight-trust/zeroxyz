@@ -22,12 +22,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedcontracts"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
+	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
 )
 

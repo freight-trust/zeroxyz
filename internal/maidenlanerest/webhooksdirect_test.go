@@ -24,10 +24,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedtx"
+	"github.com/julienschmidt/httprouter"
 
 	"github.com/stretchr/testify/assert"
 )

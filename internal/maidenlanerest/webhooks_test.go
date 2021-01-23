@@ -23,8 +23,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
+	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,7 +41,9 @@ type mockContractGW struct {
 
 func (m *mockContractGW) PreDeploy(*maidenlanedmessages.DeployContract) error { return m.preDeployErr }
 
-func (m *mockContractGW) PostDeploy(*maidenlanedmessages.TransactionReceipt) error { return m.postDeployErr }
+func (m *mockContractGW) PostDeploy(*maidenlanedmessages.TransactionReceipt) error {
+	return m.postDeployErr
+}
 
 func (m *mockContractGW) AddRoutes(*httprouter.Router) {}
 

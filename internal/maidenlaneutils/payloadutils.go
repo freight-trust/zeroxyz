@@ -20,8 +20,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/icza/dyno"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
+	"github.com/icza/dyno"
 	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 )

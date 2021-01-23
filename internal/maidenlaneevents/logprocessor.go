@@ -33,9 +33,9 @@ type logEntry struct {
 	BlockNumber      maidenlanedbind.HexBigInt `json:"blockNumber"`
 	TransactionIndex maidenlanedbind.HexUint   `json:"transactionIndex"`
 	TransactionHash  maidenlanedbind.Hash      `json:"transactionHash"`
-	Data             string            `json:"data"`
+	Data             string                    `json:"data"`
 	Topics           []*maidenlanedbind.Hash   `json:"topics"`
-	Timestamp        uint64            `json:"timestamp,omitempty"`
+	Timestamp        uint64                    `json:"timestamp,omitempty"`
 }
 
 type eventData struct {

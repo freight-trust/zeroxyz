@@ -35,11 +35,11 @@ import (
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth/maidenlanedauthtest"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/go-openapi/spec"
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedevents"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedtx"
+	"github.com/go-openapi/spec"
+	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"

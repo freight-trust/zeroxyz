@@ -23,10 +23,10 @@ import (
 	"path"
 	"testing"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedkvstore"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
+	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
 )
 

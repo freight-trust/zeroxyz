@@ -1,4 +1,3 @@
-
 package maidenlaneplugins
 
 // EventOperation enumerates operation types on events

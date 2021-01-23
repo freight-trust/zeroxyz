@@ -30,13 +30,13 @@ import (
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedtx"
 
 	"github.com/Shopify/sarama"
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedkafka"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
+	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -64,12 +64,12 @@ type MongoDBReceiptStoreConf struct {
 // RESTGatewayConf defines the YAML config structure for a webhooks bridge instance
 type RESTGatewayConf struct {
 	Kafka    maidenlanedkafka.KafkaCommonConf              `json:"kafka"`
-	MongoDB  MongoDBReceiptStoreConf               `json:"mongodb"`
-	MemStore ReceiptStoreConf                      `json:"memstore"`
+	MongoDB  MongoDBReceiptStoreConf                       `json:"mongodb"`
+	MemStore ReceiptStoreConf                              `json:"memstore"`
 	OpenAPI  maidenlanedcontracts.SmartContractGatewayConf `json:"openapi"`
 	HTTP     struct {
-		LocalAddr string             `json:"localAddr"`
-		Port      int                `json:"port"`
+		LocalAddr string                     `json:"localAddr"`
+		Port      int                        `json:"port"`
 		TLS       maidenlanedutils.TLSConfig `json:"tls"`
 	} `json:"http"`
 	WebhooksDirectConf

@@ -40,9 +40,9 @@ type ABI2Swagger struct {
 }
 
 const (
-	maidenlaneNodeCredential   = "BesuNodeCredential"
-	inputSchemaNameSuffix  = "_inputs"
-	outputSchemaNameSuffix = "_outputs"
+	maidenlaneNodeCredential = "BesuNodeCredential"
+	inputSchemaNameSuffix    = "_inputs"
+	outputSchemaNameSuffix   = "_outputs"
 )
 
 // NewABI2Swagger constructor

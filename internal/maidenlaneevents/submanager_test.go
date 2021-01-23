@@ -26,10 +26,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedkvstore"
+	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )

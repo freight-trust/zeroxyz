@@ -28,12 +28,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedevents"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth/maidenlanedauthtest"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedeth"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
+	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -162,7 +162,9 @@ func (m *mockSubMgr) AddSubscription(ctx context.Context, addr *maidenlanedbind.
 	m.capturedAddr = addr
 	return m.sub, m.err
 }
-func (m *mockSubMgr) Subscriptions(ctx context.Context) []*maidenlanedevents.SubscriptionInfo { return m.subs }
+func (m *mockSubMgr) Subscriptions(ctx context.Context) []*maidenlanedevents.SubscriptionInfo {
+	return m.subs
+}
 func (m *mockSubMgr) SubscriptionByID(ctx context.Context, id string) (*maidenlanedevents.SubscriptionInfo, error) {
 	return m.sub, m.err
 }

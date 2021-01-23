@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth/maidenlanedauthtest"
+	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
 )
 

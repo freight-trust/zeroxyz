@@ -23,11 +23,11 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/icza/dyno"
 	"github.com/freight-trust/zeroxyz/internal/maidenlaneerrors"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanekafka"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanerest"
 	"github.com/freight-trust/zeroxyz/internal/maidenlaneutils"
+	"github.com/icza/dyno"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -40,7 +40,7 @@ type ServerConfig struct {
 	KafkaBridges map[string]*maidenlanekafka.KafkaBridgeConf `json:"kafka"`
 	Webhooks     map[string]*maidenlanerest.RESTGatewayConf  `json:"webhooks"`
 	RESTGateways map[string]*maidenlanerest.RESTGatewayConf  `json:"rest"`
-	Plugins      PluginConfig                         `json:"plugins"`
+	Plugins      PluginConfig                                `json:"plugins"`
 }
 
 func initLogging(debugLevel int) {

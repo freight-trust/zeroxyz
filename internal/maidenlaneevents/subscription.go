@@ -37,20 +37,20 @@ type persistedFilter struct {
 type ethFilter struct {
 	persistedFilter
 	FromBlock maidenlanedbind.HexBigInt `json:"fromBlock,omitempty"`
-	ToBlock   string            `json:"toBlock,omitempty"`
+	ToBlock   string                    `json:"toBlock,omitempty"`
 }
 
 // SubscriptionInfo is the persisted data for the subscription
 type SubscriptionInfo struct {
 	maidenlanedmessages.TimeSorted
-	ID        string                        `json:"id,omitempty"`
-	Path      string                        `json:"path"`
-	Summary   string                        `json:"-"`    // System generated name for the subscription
-	Name      string                        `json:"name"` // User provided name for the subscription, set to Summary if missing
-	Stream    string                        `json:"stream"`
-	Filter    persistedFilter               `json:"filter"`
+	ID        string                                `json:"id,omitempty"`
+	Path      string                                `json:"path"`
+	Summary   string                                `json:"-"`    // System generated name for the subscription
+	Name      string                                `json:"name"` // User provided name for the subscription, set to Summary if missing
+	Stream    string                                `json:"stream"`
+	Filter    persistedFilter                       `json:"filter"`
 	Event     *maidenlanedbind.ABIElementMarshaling `json:"event"`
-	FromBlock string                        `json:"fromBlock,omitempty"`
+	FromBlock string                                `json:"fromBlock,omitempty"`
 }
 
 // subscription is the runtime that manages the subscription

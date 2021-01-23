@@ -119,23 +119,23 @@ type TransactionCommon struct {
 // SendTransaction message instructs the bridge to install a contract
 type SendTransaction struct {
 	TransactionCommon
-	To         string                        `json:"to"`
+	To         string                                `json:"to"`
 	Method     *maidenlanedbind.ABIElementMarshaling `json:"method,omitempty"`
-	MethodName string                        `json:"methodName,omitempty"`
+	MethodName string                                `json:"methodName,omitempty"`
 }
 
 // DeployContract message instructs the bridge to install a contract
 type DeployContract struct {
 	TransactionCommon
-	Solidity        string                `json:"solidity,omitempty"`
-	CompilerVersion string                `json:"compilerVersion,omitempty"`
-	EVMVersion      string                `json:"evmVersion,omitempty"`
+	Solidity        string                        `json:"solidity,omitempty"`
+	CompilerVersion string                        `json:"compilerVersion,omitempty"`
+	EVMVersion      string                        `json:"evmVersion,omitempty"`
 	ABI             maidenlanedbind.ABIMarshaling `json:"abi,omitempty"`
-	DevDoc          string                `json:"devDocs,omitempty"`
-	Compiled        []byte                `json:"compiled,omitempty"`
-	ContractName    string                `json:"contractName,omitempty"`
-	Description     string                `json:"description,omitempty"`
-	RegisterAs      string                `json:"registerAs,omitempty"`
+	DevDoc          string                        `json:"devDocs,omitempty"`
+	Compiled        []byte                        `json:"compiled,omitempty"`
+	ContractName    string                        `json:"contractName,omitempty"`
+	Description     string                        `json:"description,omitempty"`
+	RegisterAs      string                        `json:"registerAs,omitempty"`
 }
 
 // TransactionReceipt is sent when a transaction has been successfully mined

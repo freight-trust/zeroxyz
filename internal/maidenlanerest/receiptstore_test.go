@@ -25,11 +25,11 @@ import (
 
 	"net/http/httptest"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth/maidenlanedauthtest"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
+	"github.com/julienschmidt/httprouter"
 )
 
 type mockReceiptErrs struct{ err error }

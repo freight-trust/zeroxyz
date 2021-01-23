@@ -17,9 +17,9 @@ package maidenlanedrest
 import (
 	"time"
 
+	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
 	log "github.com/sirupsen/logrus"
 )
 

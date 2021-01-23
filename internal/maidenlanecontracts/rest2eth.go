@@ -28,7 +28,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanederrors"
@@ -37,6 +36,7 @@ import (
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedtx"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
+	"github.com/julienschmidt/httprouter"
 
 	log "github.com/sirupsen/logrus"
 )

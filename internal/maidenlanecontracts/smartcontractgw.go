@@ -34,12 +34,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-openapi/spec"
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedbind"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedopenapi"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedtx"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedutils"
+	"github.com/go-openapi/spec"
+	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/cobra"
 
 	"github.com/ethereum/go-ethereum/common/compiler"
@@ -207,8 +207,8 @@ type abiInfo struct {
 
 // remoteContractInfo is the ABI raw data back out of the REST API gateway with bytecode
 type remoteContractInfo struct {
-	ID      string                `json:"id"`
-	Address string                `json:"address,omitempty"`
+	ID      string                        `json:"id"`
+	Address string                        `json:"address,omitempty"`
 	ABI     maidenlanedbind.ABIMarshaling `json:"abi"`
 }
 

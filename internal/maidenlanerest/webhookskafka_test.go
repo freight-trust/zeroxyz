@@ -30,11 +30,11 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/julienschmidt/httprouter"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedauth/maidenlanedauthtest"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedkafka"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedmessages"
+	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"

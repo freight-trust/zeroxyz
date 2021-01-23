@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/golang/mock/gomock"
 	"github.com/freight-trust/zeroxyz/internal/maidenlanedkafka/mock_sarama"
+	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
