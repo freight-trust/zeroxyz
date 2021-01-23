@@ -1,7 +1,7 @@
 module github.com/freight-trust/zeroxyz
 
 require (
-	github.com/Azure/go-autorest/autorest v0.9.7
+	github.com/Azure/go-autorest/autorest v0.9.7 // indirect
 	github.com/DataDog/zstd v1.4.1 // indirect
 	github.com/OneOfOne/xxhash v1.2.5 // indirect
 	github.com/Shopify/sarama v1.26.4
@@ -35,8 +35,8 @@ require (
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/mitchellh/mapstructure v1.1.2
-	github.com/nicksnyder/go-i18n/v2 v2.0.3
+	github.com/mitchellh/mapstructure v1.1.2 // indirect
+	github.com/nicksnyder/go-i18n/v2 v2.0.3 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
@@ -64,11 +64,11 @@ require (
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
-	go.uber.org/atomic v1.4.0
+	go.uber.org/atomic v1.4.0 // indirect
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899 // indirect
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sys v0.0.0-20200728102440-3e129f6d46b1 // indirect
-	golang.org/x/text v0.3.3
+	golang.org/x/text v0.3.3 // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 )
